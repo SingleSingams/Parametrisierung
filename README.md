@@ -78,11 +78,13 @@ npm run db:push
 
 ## Vercel (404 / leere Seite)
 
-1. **Production-Branch:** Unter *Project → Settings → Git* muss der Branch ausgewählt sein, auf dem **`package.json`** und **`next.config.ts`** liegen (meist `main`). Wenn der Next-Code nur auf einem Feature-Branch liegt und nicht gemergt ist, liefert die `.vercel.app`-URL oft **keine gültige App**.
-2. **Letztes Deployment öffnen:** *Deployments* → neuesten Eintrag wählen → **Visit** (nicht eine alte Lesezeichen-URL). Die generische Meldung **404 NOT_FOUND** mit `fra1::…` kommt häufig, wenn **kein erfolgreiches Deployment** an diese Domain gebunden ist.
-3. **Build-Logs:** Derselbe Deployment-Eintrag → *Building* / *Logs*. Rot = Build fehlgeschlagen (z. B. Node-Version, fehlende Env) — dann gibt es oft **kein** lauffähiges Output.
-4. **Umgebungsvariablen:** Für `/api/extract` mindestens **`ANTHROPIC_API_KEY`** unter *Settings → Environment Variables* (für **Production** und ggf. **Preview**) setzen und **neu deployen**.
-5. **Root Directory:** Unter *Settings → General* leer bzw. `.` — nur setzen, wenn die App in einem **Unterordner** des Repos liegt.
+1. **Production-Branch:** Unter _Project → Settings → Git_ muss der Branch ausgewählt sein, auf dem **`package.json`** und **`next.config.ts`** liegen (meist `main`). Wenn der Next-Code nur auf einem Feature-Branch liegt und nicht gemergt ist, liefert die `.vercel.app`-URL oft **keine gültige App**.
+2. **Letztes Deployment öffnen:** _Deployments_ → neuesten Eintrag wählen → **Visit** (nicht eine alte Lesezeichen-URL). Die generische Meldung **404 NOT_FOUND** mit `fra1::…` kommt häufig, wenn **kein erfolgreiches Deployment** an diese Domain gebunden ist.
+3. **Build-Logs:** Derselbe Deployment-Eintrag → _Building_ / _Logs_. Rot = Build fehlgeschlagen (z. B. Node-Version, fehlende Env) — dann gibt es oft **kein** lauffähiges Output.
+4. **Umgebungsvariablen:** Für `/api/extract` mindestens **`ANTHROPIC_API_KEY`** unter _Settings → Environment Variables_ (für **Production** und ggf. **Preview**) setzen und **neu deployen**.
+5. **GitHub Actions:** Nach Merge auf `main` unter dem Tab **Actions** den Workflow **CI** öffnen — wenn **Build** dort grün ist, ist der Code in Ordnung; dann liegt das Problem nur noch in den **Vercel-Projekteinstellungen** (nicht im Repo).
+6. **Vercel-Projekt neu anlegen:** Projekt in Vercel löschen, **Import** erneut ausführen, dabei **keine** Root Directory und **keine** Overrides setzen — oft schneller als endloses Debuggen alter Konfiguration.
+7. Repo enthält **`vercel.json`** mit `framework: nextjs` und festem `buildCommand`/`installCommand` als zusätzliche Orientierung für den Builder.
 
 Der Build-Befehl im Repo ist **`npm run build`** (`next build` ohne Turbopack) für maximale Kompatibilität mit dem Vercel-Builder.
 
