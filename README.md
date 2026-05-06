@@ -96,3 +96,4 @@ Der Build-Befehl im Repo ist **`npm run build`** (`next build` ohne Turbopack) f
 - Keine echte Kunden-VO ohne Freigabe; POC mit synthetischen oder anonymisierten Dokumenten.
 - Modell-ID über `ANTHROPIC_MODEL` steuerbar (siehe Anthropic-Dokumentation).
 - **Vercel Hobby:** Serverless-Funktionen haben ein **kurzes Zeitlimit** (ca. 10 s). Die Extraktion ruft die KI auf und kann **deutlich länger** dauern — dann liefert Vercel eine **HTML-Fehlerseite** statt JSON. Abhilfe: **Vercel Pro** (längere `maxDuration`, im Code bis 300 s gesetzt) oder **`npm run extract`** lokal mit `.env`.
+- **TXT-Upload:** `pdf-parse` und `mammoth` werden nur bei PDF/DOCX **dynamisch** geladen, damit reine Text-Uploads auf Vercel nicht an optionalen Native-Modulen scheitern.
