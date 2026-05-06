@@ -37,19 +37,35 @@ ANTHROPIC_API_KEY=... npm run test   # zusätzlich: Integration gegen Anthropic
 - Handgepflegtes Soll-JSON: `tests/fixtures/synthetic-bolz-direktzusage/gold-extraction.json`
 - Kernfeldvergleich (ohne Metadaten/Quellenwortlaut): `src/lib/validation/compare-critical-fields.ts`
 
+## Reference Data (BBG)
+
+- Tabelle **1990–2026** in `src/lib/reference-data/bbg-table.ts` (Arbeitnehmer/Angestellte, West laut SGB VI Anlage 2, Ost/Beitrittsgebiet laut Anlage 2a; ab 2025 einheitliche Regionalwerte).
+- Abfrage: `getBbgRentenversicherungAnnualEur(jahr, "west" | "east", "arbeitnehmer" | "angestellte")` in `src/lib/reference-data/bbg-service.ts`.
+- **Rechnungszins**: Platzhalter `getRechnungszinsStub()` in `src/lib/reference-data/rechnungszins-stub.ts` (echte Historie später).
+
+## Berechnungs-Engine (Skelett)
+
+Deterministische Hilfsfunktionen unter `src/lib/calculation/`:
+
+- `accumulateEmployerContributionsBbgCapped` — Arbeitgeberanteil auf BBG-gekapptem Brutto je Jahr.
+- `calculateOldAgeBenefitSkeleton`, `calculateDisabilityBenefitSkeleton`, `calculateDeathBenefitsSkeleton`, `calculateEarlyExitWithVestingSkeleton` — lineare Aufzinsung, einfache Vorzeit-Kürzung, Hinterbliebenen-Split (ohne Biometrie/Heubeck).
+
+**Hinweis:** Mathematisch bewusst vereinfacht; dient UI-Erklärpfad und Tests, nicht der versicherungsmathematischen Schlussprüfung.
+
 ## Projektstruktur (Auszug)
 
-| Pfad                     | Inhalt                                                           |
-| ------------------------ | ---------------------------------------------------------------- |
-| `src/lib/schema/`        | Zod-Schema und Typen                                             |
-| `src/lib/extraction/`    | Systemprompt, Anthropic-Orchestrierung                           |
-| `src/lib/documents/`     | PDF (`pdf-parse` / `PDFParse`), DOCX (`mammoth`)                 |
-| `src/app/api/extract/`   | POST `multipart/form-data` mit Feld `file`                       |
-| `src/db/schema.ts`       | Drizzle-Tabellenstubs (Projekte, Dokumente, Extraktionen, Audit) |
-| `scripts/extract-cli.ts` | Kommandozeilen-Extraktion                                        |
-| `src/lib/validation/`    | Kernfeldvergleich Extraktion ↔ Gold                              |
-| `tests/fixtures/...`     | Synthetische VO + Gold-JSON                                      |
-| `vitest.config.ts`       | Testkonfiguration (Vitest)                                       |
+| Pfad                      | Inhalt                                                           |
+| ------------------------- | ---------------------------------------------------------------- |
+| `src/lib/schema/`         | Zod-Schema und Typen                                             |
+| `src/lib/extraction/`     | Systemprompt, Anthropic-Orchestrierung                           |
+| `src/lib/reference-data/` | BBG-Tabelle (SGB VI), Rechnungszins-Stub                         |
+| `src/lib/calculation/`    | Beitragssumme, Alters-/Invaliditäts-/Tod-/Ausscheiden-Skelett    |
+| `src/app/api/extract/`    | POST `multipart/form-data` mit Feld `file`                       |
+| `src/db/schema.ts`        | Drizzle-Tabellenstubs (Projekte, Dokumente, Extraktionen, Audit) |
+| `scripts/extract-cli.ts`  | Kommandozeilen-Extraktion                                        |
+| `src/lib/validation/`     | Kernfeldvergleich Extraktion ↔ Gold                              |
+| `tests/fixtures/...`      | Synthetische VO + Gold-JSON                                      |
+| `vitest.config.ts`        | Testkonfiguration (Vitest)                                       |
 
 ## Datenbank (optional)
 
