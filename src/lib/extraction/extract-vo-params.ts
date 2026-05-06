@@ -1,9 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 import { EXTRACTION_SYSTEM_PROMPT } from "./system-prompt";
 import { parseJsonFromModelText } from "./parse-json-response";
 
-const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+/** Aktuelles Standardmodell (siehe Anthropic-Modellliste); ältere IDs wie …-20250514 liefern oft 404. */
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 export type ExtractVoParamsInput = {
   documentText: string;
@@ -36,12 +37,22 @@ export async function extractVoParams(
   const model = input.model ?? process.env.ANTHROPIC_MODEL ?? DEFAULT_MODEL;
   const client = new Anthropic({ apiKey });
 
-  const message = await client.messages.create({
-    model,
-    max_tokens: 16_384,
-    system: EXTRACTION_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildUserPrompt(input) }],
-  });
+  let message;
+  try {
+    message = await client.messages.create({
+      model,
+      max_tokens: 16_384,
+      system: EXTRACTION_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: buildUserPrompt(input) }],
+    });
+  } catch (e) {
+    if (e instanceof APIError && e.status === 404) {
+      throw new Error(
+        `Anthropic-Modell "${model}" wurde nicht gefunden (404). Lege in Vercel (oder .env) die Variable ANTHROPIC_MODEL auf ein aktuelles Modell, z. B. claude-sonnet-4-6 oder claude-haiku-4-5 — siehe https://docs.anthropic.com/en/docs/about-claude/models`,
+      );
+    }
+    throw e;
+  }
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
