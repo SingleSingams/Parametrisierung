@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 
+function isAllowedDocumentFile(name: string): boolean {
+  return /\.(pdf|docx|txt)$/i.test(name);
+}
+
 export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +20,10 @@ export default function Home() {
     const file = input.files?.[0];
     if (!file) {
       setError("Bitte eine Datei wählen.");
+      return;
+    }
+    if (!isAllowedDocumentFile(file.name)) {
+      setError("Nur PDF-, DOCX- oder TXT-Dateien sind erlaubt.");
       return;
     }
 
@@ -90,7 +98,6 @@ export default function Home() {
               <input
                 name="file"
                 type="file"
-                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 className="text-sm font-normal file:mr-4 file:rounded-md file:border-0 file:bg-zinc-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800 dark:file:bg-zinc-100 dark:file:text-zinc-900"
               />
             </label>
@@ -102,6 +109,14 @@ export default function Home() {
               {busy ? "Analyse läuft…" : "Extraktion starten"}
             </button>
           </form>
+          <p className="text-xs leading-relaxed text-zinc-500">
+            Tipp (Android): Wenn{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
+              .txt
+            </code>{" "}
+            ausgegraut ist, im Dateidialog oft <strong>„Alle Dateien“</strong> wählen —
+            die App filtert PDF/DOCX/TXT beim Absenden.
+          </p>
           <p className="mt-4 text-xs leading-relaxed text-zinc-500">
             Beratungs-Hilfsmittel ohne versicherungsmathematische Endprüfung. Nur
             synthetische oder anonymisierte VOs verwenden; API-Key und Modell siehe{" "}
