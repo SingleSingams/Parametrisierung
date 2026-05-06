@@ -50,9 +50,17 @@ export default function Home() {
             bAV-Parametrisierungs-Assistent
           </h1>
           <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Upload einer Versorgungsordnung (PDF oder DOCX). Das Backend extrahiert
+            Upload einer Versorgungsordnung (PDF, DOCX oder TXT). Das Backend extrahiert
             strukturierte Parameter für BoLZ Direktzusage inklusive Quellenangaben und
-            validiert gegen ein Zod-Schema.
+            validiert gegen ein Zod-Schema. Ohne eigene VO:{" "}
+            <a
+              href="/demo-vo.txt"
+              download
+              className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
+            >
+              Demo-VO als Text herunterladen
+            </a>{" "}
+            und wieder hochladen.
           </p>
         </header>
 
@@ -63,7 +71,7 @@ export default function Home() {
               <input
                 name="file"
                 type="file"
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 className="text-sm font-normal file:mr-4 file:rounded-md file:border-0 file:bg-zinc-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800 dark:file:bg-zinc-100 dark:file:text-zinc-900"
               />
             </label>

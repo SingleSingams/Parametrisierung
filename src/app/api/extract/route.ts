@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const kind = detectDocumentKind(file.name);
     if (!kind) {
       return NextResponse.json(
-        { error: "Nur PDF und DOCX werden unterstützt." },
+        { error: "Nur PDF, DOCX und TXT werden unterstützt." },
         { status: 400 },
       );
     }

@@ -1,6 +1,6 @@
 # bAV-Parametrisierungs-Assistent (POC)
 
-Proof-of-Concept für KI-gestützte Analyse von Versorgungsordnungen (BoLZ, Direktzusage): Textextraktion aus PDF/DOCX, strukturierte Parameter-Extraktion über die Anthropic API, Validierung mit **Zod** (`BoLZ_Direktzusage_v1`).
+Proof-of-Concept für KI-gestützte Analyse von Versorgungsordnungen (BoLZ, Direktzusage): Textextraktion aus PDF/DOCX/TXT, strukturierte Parameter-Extraktion über die Anthropic API, Validierung mit **Zod** (`BoLZ_Direktzusage_v1`).
 
 ## Voraussetzungen
 
@@ -24,7 +24,10 @@ Web-UI: Upload unter `http://localhost:3000`.
 ```bash
 npm run extract -- pfad/zur/vo.pdf --out ergebnis.json
 npm run extract -- vo.docx --dry-run   # nur Klartext-Vorschau
+npm run extract -- public/demo-vo.txt --out demo.json   # Demo ohne eigene VO
 ```
+
+Auf der Web-UI: feste Demo-Datei unter **`/demo-vo.txt`** (herunterladen und wieder als `.txt` hochladen).
 
 ## Tests und Gold-Fixture
 
@@ -65,7 +68,7 @@ Deterministische Hilfsfunktionen unter `src/lib/calculation/`:
 | `scripts/extract-cli.ts`  | Kommandozeilen-Extraktion                                        |
 | `src/lib/validation/`     | Kernfeldvergleich Extraktion ↔ Gold                              |
 | `tests/fixtures/...`      | Synthetische VO + Gold-JSON                                      |
-| `vitest.config.ts`        | Testkonfiguration (Vitest)                                       |
+| `public/demo-vo.txt`      | Feste Demo-VO (TXT) zum Download und erneuten Upload             |
 
 ## Datenbank (optional)
 
