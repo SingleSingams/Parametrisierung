@@ -4,6 +4,8 @@ import { detectDocumentKind, extractPlainText } from "@/lib/documents/extract-te
 import { extractVoParams } from "@/lib/extraction/extract-vo-params";
 
 export const runtime = "nodejs";
+/** Vercel: je nach Plan gedeckelt (Hobby oft ~10 s). Für längere KI-Läufe Pro oder lokales CLI. */
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   try {

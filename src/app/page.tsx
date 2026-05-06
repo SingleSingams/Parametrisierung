@@ -24,13 +24,32 @@ export default function Home() {
       const body = new FormData();
       body.append("file", file);
       const res = await fetch("/api/extract", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) {
+      const raw = await res.text();
+
+      let data: unknown;
+      try {
+        data = JSON.parse(raw) as unknown;
+      } catch {
+        const hint =
+          raw.trimStart().startsWith("<!") || raw.trimStart().startsWith("<html")
+            ? " Der Server hat HTML statt JSON geliefert — typisch bei Vercel-Zeitlimit (Hobby oft ~10 s, KI braucht länger), einer Fehlerseite oder einem falschen Pfad."
+            : "";
         setError(
-          typeof data.error === "string" ? data.error : "Anfrage fehlgeschlagen.",
+          `Antwort war kein JSON (HTTP ${res.status}).${hint}\n\nAnfang der Antwort:\n${raw.slice(0, 500)}`,
         );
         return;
       }
+
+      if (!res.ok) {
+        const errObj = data as { error?: string };
+        setError(
+          typeof errObj.error === "string"
+            ? errObj.error
+            : `Anfrage fehlgeschlagen (HTTP ${res.status}).`,
+        );
+        return;
+      }
+
       setJson(JSON.stringify(data, null, 2));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Netzwerkfehler.");
