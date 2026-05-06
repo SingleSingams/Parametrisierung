@@ -76,6 +76,16 @@ npm run db:generate
 npm run db:push
 ```
 
+## Vercel (404 / leere Seite)
+
+1. **Production-Branch:** Unter *Project → Settings → Git* muss der Branch ausgewählt sein, auf dem **`package.json`** und **`next.config.ts`** liegen (meist `main`). Wenn der Next-Code nur auf einem Feature-Branch liegt und nicht gemergt ist, liefert die `.vercel.app`-URL oft **keine gültige App**.
+2. **Letztes Deployment öffnen:** *Deployments* → neuesten Eintrag wählen → **Visit** (nicht eine alte Lesezeichen-URL). Die generische Meldung **404 NOT_FOUND** mit `fra1::…` kommt häufig, wenn **kein erfolgreiches Deployment** an diese Domain gebunden ist.
+3. **Build-Logs:** Derselbe Deployment-Eintrag → *Building* / *Logs*. Rot = Build fehlgeschlagen (z. B. Node-Version, fehlende Env) — dann gibt es oft **kein** lauffähiges Output.
+4. **Umgebungsvariablen:** Für `/api/extract` mindestens **`ANTHROPIC_API_KEY`** unter *Settings → Environment Variables* (für **Production** und ggf. **Preview**) setzen und **neu deployen**.
+5. **Root Directory:** Unter *Settings → General* leer bzw. `.` — nur setzen, wenn die App in einem **Unterordner** des Repos liegt.
+
+Der Build-Befehl im Repo ist **`npm run build`** (`next build` ohne Turbopack) für maximale Kompatibilität mit dem Vercel-Builder.
+
 ## Hinweise
 
 - Keine echte Kunden-VO ohne Freigabe; POC mit synthetischen oder anonymisierten Dokumenten.
