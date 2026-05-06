@@ -1,6 +1,7 @@
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 import { EXTRACTION_SYSTEM_PROMPT } from "./system-prompt";
+import { normalizeAnthropicBolzJson } from "./normalize-extraction-json";
 import { parseJsonFromModelText } from "./parse-json-response";
 
 /** Aktuelles Standardmodell (siehe Anthropic-Modellliste); ältere IDs wie …-20250514 liefern oft 404. */
@@ -68,6 +69,8 @@ export async function extractVoParams(
       `JSON-Parsing fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}\n---\n${snippet}`,
     );
   }
+
+  raw = normalizeAnthropicBolzJson(raw);
 
   const parsed = voBolzDirektzusageV1Schema.safeParse(raw);
   if (!parsed.success) {
