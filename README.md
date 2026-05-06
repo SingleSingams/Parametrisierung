@@ -26,6 +26,17 @@ npm run extract -- pfad/zur/vo.pdf --out ergebnis.json
 npm run extract -- vo.docx --dry-run   # nur Klartext-Vorschau
 ```
 
+## Tests und Gold-Fixture
+
+```bash
+npm run test              # immer: Gold-JSON muss Zod erfüllen
+ANTHROPIC_API_KEY=... npm run test   # zusätzlich: Integration gegen Anthropic
+```
+
+- Synthetische VO (Klartext): `tests/fixtures/synthetic-bolz-direktzusage/vo-muster-ag.txt`
+- Handgepflegtes Soll-JSON: `tests/fixtures/synthetic-bolz-direktzusage/gold-extraction.json`
+- Kernfeldvergleich (ohne Metadaten/Quellenwortlaut): `src/lib/validation/compare-critical-fields.ts`
+
 ## Projektstruktur (Auszug)
 
 | Pfad                     | Inhalt                                                           |
@@ -36,6 +47,9 @@ npm run extract -- vo.docx --dry-run   # nur Klartext-Vorschau
 | `src/app/api/extract/`   | POST `multipart/form-data` mit Feld `file`                       |
 | `src/db/schema.ts`       | Drizzle-Tabellenstubs (Projekte, Dokumente, Extraktionen, Audit) |
 | `scripts/extract-cli.ts` | Kommandozeilen-Extraktion                                        |
+| `src/lib/validation/`    | Kernfeldvergleich Extraktion ↔ Gold                              |
+| `tests/fixtures/...`     | Synthetische VO + Gold-JSON                                      |
+| `vitest.config.ts`       | Testkonfiguration (Vitest)                                       |
 
 ## Datenbank (optional)
 

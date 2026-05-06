@@ -1,0 +1,120 @@
+{
+  "metadata": {
+    "documentName": "vo-muster-ag.txt",
+    "documentDate": "2019-07-01",
+    "extractedAt": "2026-05-06T12:00:00.000Z",
+    "modelVersion": "fixture-handcrafted-v1",
+    "confidence": "high"
+  },
+  "scheme": {
+    "type": "BoLZ",
+    "implementation": "Direktzusage",
+    "openForNewEntries": true,
+    "closingDate": null
+  },
+  "eligibility": {
+    "minAge": {
+      "value": 21,
+      "source": {
+        "page": 1,
+        "para": "§ 2 Abs. 1",
+        "quote": "Anspruchsberechtigt sind alle Mitarbeiter ab Vollendung des 21. Lebensjahres."
+      }
+    },
+    "waitingPeriod": {
+      "months": 12,
+      "source": {
+        "page": 1,
+        "para": "§ 2 Abs. 2",
+        "quote": "Der Anspruch entsteht frühestens nach Ablauf von zwölf Monaten ununterbrochener Betriebszugehörigkeit."
+      }
+    },
+    "excludedGroups": ["Vorstand", "Leitung"]
+  },
+  "contributions": {
+    "employerContribution": {
+      "type": "percentageOfSalary",
+      "rate": 0.04,
+      "base": "pensionableSalary",
+      "salaryDefinition": "grossAnnualSalary",
+      "salaryCap": "BBG_DRV_West",
+      "source": {
+        "page": 1,
+        "para": "§ 3 Abs. 1",
+        "quote": "Die Muster AG zahlt einen Arbeitgeberzuschuss in Höhe von 4 % des beitragspflichtigen Bruttojahresgehalts."
+      }
+    },
+    "employeeContribution": {
+      "type": "optional",
+      "maxRate": 0.04,
+      "source": {
+        "page": 1,
+        "para": "§ 3 Abs. 2",
+        "quote": "Die Arbeitnehmerin oder der Arbeitnehmer kann auf freiwilliger Basis bis zu 4 % des beitragspflichtigen Bruttojahresgehalts als Eigenbeitrag leisten."
+      }
+    }
+  },
+  "vesting": {
+    "rule": "BetrAVG_§1b",
+    "minServiceYears": 3,
+    "minAge": 21,
+    "source": {
+      "page": 1,
+      "para": "§ 4",
+      "quote": "Die Unverfallbarkeit richtet sich nach § 1b BetrAVG. Die Anwartschaft wird unverfallbar, wenn der Arbeitnehmer das 21. Lebensjahr vollendet hat und mindestens drei Jahre Betriebszugehörigkeit zurückgelegt hat."
+    }
+  },
+  "benefits": {
+    "oldAge": {
+      "regularRetirementAge": "statutoryPensionAge",
+      "earlyRetirementReductionPerMonth": 0.003,
+      "formula": "sumOfContributions * guaranteedInterestFactor + surplus",
+      "guaranteedInterest": 0.0125,
+      "source": {
+        "page": 1,
+        "para": "§ 5 Abs. 1–3",
+        "quote": "Die Regelaltersgrenze entspricht der gesetzlichen Regelaltersgrenze der gesetzlichen Rentenversicherung."
+      }
+    },
+    "disability": {
+      "qualifying": "fullDisabilityPension",
+      "formula": "sameAsOldAgeWithoutEarlyRetirementReduction",
+      "source": {
+        "page": 1,
+        "para": "§ 6",
+        "quote": "Bei voller Erwerbsminderung im Sinne einer vollen Erwerbsminderungsrente der gesetzlichen Rentenversicherung wird die Altersleistung wie bei Erreichen der Regelaltersgrenze berechnet, ohne vorzeitige Abschläge."
+      }
+    },
+    "death": {
+      "spouse": {
+        "rate": 0.6,
+        "remarriage": "ceases",
+        "source": {
+          "page": 1,
+          "para": "§ 7 Abs. 1",
+          "quote": "Der überlebende Ehegatte erhält 60 % der zum Zeitpunkt des Todes maßgebenden Altersleistung. Die Leistung endet bei Wiederheirat."
+        }
+      },
+      "orphan": {
+        "halfOrphan": 0.1,
+        "fullOrphan": 0.2,
+        "maxAge": 25,
+        "source": {
+          "page": 1,
+          "para": "§ 7 Abs. 2",
+          "quote": "Halbwaisen erhalten 10 %, Vollwaisen 20 % der Altersleistung, längstens bis zur Vollendung des 25. Lebensjahres."
+        }
+      }
+    }
+  },
+  "adjustment": {
+    "rule": "BetrAVG_§16",
+    "method": "tripleOption",
+    "source": {
+      "page": 1,
+      "para": "§ 8",
+      "quote": "Die Anpassung der laufenden Leistungen erfolgt nach Maßgabe des § 16 BetrAVG (Dreifachoption)."
+    }
+  },
+  "openQuestions": []
+}
