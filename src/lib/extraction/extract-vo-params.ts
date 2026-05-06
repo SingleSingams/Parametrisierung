@@ -86,6 +86,7 @@ export async function extractVoParams(
       documentName: input.documentName,
       extractedAt: now,
       modelVersion: model,
+      confidence: parsed.data.metadata.confidence ?? "medium",
     },
   };
 }
