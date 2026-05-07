@@ -11,9 +11,90 @@ import {
   type BenefitComputationResult,
 } from "@/lib/calculation";
 import type { SalaryHistoryEntry } from "@/lib/calculation/types";
-import { formatEur } from "@/lib/presenters/formatters";
+import {
+  formatEur,
+  formatNumberDe,
+  formatPercentFromDecimal,
+} from "@/lib/presenters/formatters";
 
 type Row = { year: number; gross: string; region: "west" | "east" };
+
+function initialSalaryRows(): Row[] {
+  const y = new Date().getFullYear();
+  return [{ year: y, gross: "", region: "west" as const }];
+}
+
+function VoExtractionSnapshot({ data }: { data: VoBolzDirektzusageV1 }) {
+  const pct = (v: number | null | undefined) =>
+    v == null || Number.isNaN(v) ? "—" : formatPercentFromDecimal(v);
+  const num = (v: number | null | undefined) =>
+    v == null || Number.isNaN(v) ? "—" : formatNumberDe(v);
+  const rag = data.benefits.oldAge.regularRetirementAge;
+  return (
+    <div className="rounded-xl border border-indigo-200/80 bg-indigo-50/50 p-4 dark:border-indigo-800 dark:bg-indigo-950/30">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-800 dark:text-indigo-300">
+        Aus Ihrer Extraktion
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        {data.metadata.documentName}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <div className="min-w-[5.5rem] rounded-lg border border-white/80 bg-white/90 px-2 py-1.5 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+          <span className="block text-[10px] font-medium uppercase text-zinc-500">
+            AG-Anteil
+          </span>
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            {pct(data.contributions.employerContribution.rate)}
+          </span>
+        </div>
+        <div className="min-w-[5.5rem] rounded-lg border border-white/80 bg-white/90 px-2 py-1.5 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+          <span className="block text-[10px] font-medium uppercase text-zinc-500">
+            Garantiezins
+          </span>
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            {pct(data.benefits.oldAge.guaranteedInterest)}
+          </span>
+        </div>
+        <div className="min-w-[5.5rem] rounded-lg border border-white/80 bg-white/90 px-2 py-1.5 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+          <span className="block text-[10px] font-medium uppercase text-zinc-500">
+            Kürz./Mon.
+          </span>
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            {pct(data.benefits.oldAge.earlyRetirementReductionPerMonth)}
+          </span>
+        </div>
+        <div className="min-w-[6rem] flex-1 rounded-lg border border-white/80 bg-white/90 px-2 py-1.5 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+          <span className="block text-[10px] font-medium uppercase text-zinc-500">
+            Regelalter (Text)
+          </span>
+          <span className="line-clamp-2 font-semibold text-zinc-900 dark:text-zinc-100">
+            {rag != null && String(rag).trim() !== "" ? String(rag) : "—"}
+          </span>
+        </div>
+        <div className="min-w-[5.5rem] rounded-lg border border-white/80 bg-white/90 px-2 py-1.5 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+          <span className="block text-[10px] font-medium uppercase text-zinc-500">
+            Witwe %
+          </span>
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            {pct(data.benefits.death.spouse.rate)}
+          </span>
+        </div>
+        <div className="min-w-[5.5rem] rounded-lg border border-white/80 bg-white/90 px-2 py-1.5 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+          <span className="block text-[10px] font-medium uppercase text-zinc-500">
+            Waise max.
+          </span>
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+            {num(data.benefits.death.orphan.maxAge)}
+          </span>
+        </div>
+      </div>
+      <p className="mt-2 text-[11px] leading-snug text-indigo-900/80 dark:text-indigo-200/90">
+        Die Felder unten starten leer bzw. mit Ihren VO-Werten — keine festen
+        Demo-Gehälter mehr.
+      </p>
+    </div>
+  );
+}
 
 function parseRows(rows: Row[]): SalaryHistoryEntry[] {
   return rows
@@ -66,16 +147,13 @@ export function CalculationWorkbench({ extraction, compactChrome }: Props) {
     return { rate, g, red, spouse, half, full };
   }, [extraction]);
 
-  const [rows, setRows] = useState<Row[]>([
-    { year: 2023, gross: "90000", region: "west" },
-    { year: 2024, gross: "95000", region: "west" },
-  ]);
-  const [valuationYear, setValuationYear] = useState(2026);
+  const [rows, setRows] = useState<Row[]>(initialSalaryRows);
+  const [valuationYear, setValuationYear] = useState(() => new Date().getFullYear());
   const [earlyMonths, setEarlyMonths] = useState(0);
-  const [employerRate, setEmployerRate] = useState("0.04");
-  const [guaranteed, setGuaranteed] = useState("0.0125");
-  const [redPerMonth, setRedPerMonth] = useState("0.003");
-  const [refDeath, setRefDeath] = useState("100000");
+  const [employerRate, setEmployerRate] = useState("");
+  const [guaranteed, setGuaranteed] = useState("");
+  const [redPerMonth, setRedPerMonth] = useState("");
+  const [refDeath, setRefDeath] = useState("");
   const [isVested, setIsVested] = useState(true);
   const [oldAge, setOldAge] = useState<BenefitComputationResult | null>(null);
   const [dis, setDis] = useState<BenefitComputationResult | null>(null);
@@ -84,11 +162,14 @@ export function CalculationWorkbench({ extraction, compactChrome }: Props) {
 
   useEffect(() => {
     if (!extraction) return;
-    setEmployerRate(String(extraction.contributions.employerContribution.rate ?? 0.04));
-    setGuaranteed(String(extraction.benefits.oldAge.guaranteedInterest ?? 0.0125));
-    setRedPerMonth(
-      String(extraction.benefits.oldAge.earlyRetirementReductionPerMonth ?? 0.003),
-    );
+    setRows(initialSalaryRows());
+    const r = extraction.contributions.employerContribution.rate;
+    setEmployerRate(r != null && !Number.isNaN(r) ? String(r) : "");
+    const g = extraction.benefits.oldAge.guaranteedInterest;
+    setGuaranteed(g != null && !Number.isNaN(g) ? String(g) : "");
+    const red = extraction.benefits.oldAge.earlyRetirementReductionPerMonth;
+    setRedPerMonth(red != null && !Number.isNaN(red) ? String(red) : "");
+    setRefDeath("");
     setOldAge(null);
     setDis(null);
     setDeath(null);
@@ -145,9 +226,11 @@ export function CalculationWorkbench({ extraction, compactChrome }: Props) {
           </p>
         )}
 
+        <VoExtractionSnapshot data={extraction} />
+
         <div className="space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
           <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-            Sätze aus der Extraktion (anpassbar)
+            Sätze für die Rechnung (editierbar)
           </h3>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -179,8 +262,11 @@ export function CalculationWorkbench({ extraction, compactChrome }: Props) {
 
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-            Beispiel-Bruttolöhne (EUR pro Jahr)
+            Bruttolöhne für die Simulation (EUR / Jahr)
           </h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Keine vorbelegten Demo-Beträge — bitte Ihre Plan- oder Ist-Bruttos eintragen.
+          </p>
           {rows.map((r, i) => (
             <div key={i} className="flex flex-wrap items-end gap-2">
               <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -201,6 +287,7 @@ export function CalculationWorkbench({ extraction, compactChrome }: Props) {
                 Brutto
                 <input
                   className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  placeholder="z. B. 85000"
                   value={r.gross}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -242,8 +329,8 @@ export function CalculationWorkbench({ extraction, compactChrome }: Props) {
               setRows((prev) => [
                 ...prev,
                 {
-                  year: (prev[prev.length - 1]?.year ?? 2024) + 1,
-                  gross: "80000",
+                  year: (prev[prev.length - 1]?.year ?? new Date().getFullYear()) + 1,
+                  gross: "",
                   region: "west",
                 },
               ])

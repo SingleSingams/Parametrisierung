@@ -11,20 +11,20 @@ import {
 function StatusBadge({ status }: { status: SystemCalculationParameterRow["status"] }) {
   if (status === "ok") {
     return (
-      <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200">
+      <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200">
         gesetzt
       </span>
     );
   }
   if (status === "missing") {
     return (
-      <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-950 dark:bg-amber-950/50 dark:text-amber-100">
+      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-950 dark:bg-amber-950/50 dark:text-amber-100">
         fehlt
       </span>
     );
   }
   return (
-    <span className="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-950 dark:bg-sky-950/50 dark:text-sky-100">
+    <span className="shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-950 dark:bg-sky-950/50 dark:text-sky-100">
       prüfen
     </span>
   );
@@ -43,22 +43,21 @@ export function CalculationParameterChecklist({ data }: Props) {
     <div className="space-y-6">
       <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-300">
         <p className="font-medium text-zinc-900 dark:text-zinc-100">
-          Parameter für System & Berechnungslogik
+          Parameter für System & Berechnung
         </p>
         <p className="mt-2 leading-relaxed">
-          Das ist eine <strong>Implementierungs-Checkliste</strong>: eine Zeile pro
-          Kennzahl, die Sie in Ihrer Software pflegen müssen, um Beiträge und Leistungen
-          rechnerisch abzubilden. Spalte <strong>System-Schlüssel</strong> können Sie
-          1:1 als Feldnamen / Konfigurationsschlüssel verwenden.
+          Jede Karte ist <strong>eine Kennzahl</strong>, die Sie in Ihrer Software
+          hinterlegen. Der <strong>Kurzcode</strong> eignet sich für Konfiguration und
+          Abstimmung. Den <strong>technischen JSON-Pfad</strong> klappen Sie bei Bedarf
+          auf — ohne horizontales Scrollen.
         </p>
         <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-          Kurzüberblick:{" "}
           <span className="font-semibold text-amber-800 dark:text-amber-200">
             {missingCount} fehlen
           </span>
           {", "}
           <span className="font-semibold text-sky-800 dark:text-sky-200">
-            {reviewCount} zur fachlichen Prüfung
+            {reviewCount} prüfen
           </span>
           {", "}
           <span className="font-semibold text-emerald-800 dark:text-emerald-200">
@@ -68,55 +67,60 @@ export function CalculationParameterChecklist({ data }: Props) {
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-zinc-200 bg-zinc-100 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-              <th className="px-3 py-2.5">#</th>
-              <th className="px-3 py-2.5">Kategorie</th>
-              <th className="px-3 py-2.5">System-Schlüssel</th>
-              <th className="px-3 py-2.5">Parameter</th>
-              <th className="px-3 py-2.5">Zweck (Motorik)</th>
-              <th className="px-3 py-2.5">Wert aus VO</th>
-              <th className="px-3 py-2.5">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr
-                key={r.systemKey}
-                className={`border-b border-zinc-100 last:border-0 dark:border-zinc-800/80 ${
+      <ul className="space-y-4">
+        {rows.map((r, i) => {
+          const prev = rows[i - 1];
+          const showCatHeader = !prev || prev.category !== r.category;
+          return (
+            <li key={`${r.schemaPath}-${i}`}>
+              {showCatHeader ? (
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+                  {r.category}
+                </p>
+              ) : null}
+              <article
+                className={`rounded-xl border p-4 shadow-sm ${
                   r.status === "missing"
-                    ? "bg-amber-50/50 dark:bg-amber-950/15"
+                    ? "border-amber-200 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/20"
                     : r.status === "review"
-                      ? "bg-sky-50/40 dark:bg-sky-950/15"
-                      : "odd:bg-white even:bg-zinc-50/40 dark:odd:bg-zinc-950/30 dark:even:bg-zinc-900/25"
+                      ? "border-sky-200 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/20"
+                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950/40"
                 }`}
               >
-                <td className="px-3 py-2 tabular-nums text-zinc-500">{i + 1}</td>
-                <td className="px-3 py-2 text-zinc-700 dark:text-zinc-300">
-                  {r.category}
-                </td>
-                <td className="px-3 py-2 font-mono text-xs text-zinc-800 dark:text-zinc-200">
-                  {r.systemKey}
-                </td>
-                <td className="px-3 py-2 font-medium text-zinc-900 dark:text-zinc-50">
-                  {r.label}
-                </td>
-                <td className="max-w-[14rem] px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400">
-                  {r.purpose}
-                </td>
-                <td className="px-3 py-2 text-right font-medium text-zinc-900 dark:text-zinc-100">
-                  {r.valueDisplay}
-                </td>
-                <td className="px-3 py-2">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-zinc-900 px-2 py-1 font-mono text-[11px] font-bold tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
+                      {r.code}
+                    </span>
+                    <span className="text-xs tabular-nums text-zinc-400">#{i + 1}</span>
+                  </div>
                   <StatusBadge status={r.status} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+                <h3 className="mt-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                  {r.label}
+                </h3>
+                <p className="mt-1 text-xs leading-snug text-zinc-600 dark:text-zinc-400">
+                  {r.purpose}
+                </p>
+                <p className="mt-3 text-sm">
+                  <span className="text-zinc-500 dark:text-zinc-400">Wert aus VO:</span>{" "}
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {r.valueDisplay}
+                  </span>
+                </p>
+                <details className="mt-3 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+                  <summary className="cursor-pointer text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                    Technischer Pfad (JSON)
+                  </summary>
+                  <p className="mt-1 break-all font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+                    {r.schemaPath}
+                  </p>
+                </details>
+              </article>
+            </li>
+          );
+        })}
+      </ul>
 
       {data.openQuestions.length ? (
         <section className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900 dark:bg-amber-950/30">

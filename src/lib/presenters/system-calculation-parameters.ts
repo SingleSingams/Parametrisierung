@@ -8,13 +8,12 @@ import {
 export type SystemParamStatus = "ok" | "missing" | "review";
 
 export type SystemCalculationParameterRow = {
-  /** Gruppierung nur für die Anzeige */
   category: string;
-  /** Stabiler Schlüssel für Mapping ins Zielsystem */
-  systemKey: string;
-  /** Lesbare Bezeichnung */
+  /** Kurzer, merkbarer Code für Konfiguration / Tickets (ohne Punkt-Notation). */
+  code: string;
+  /** Vollständiger JSON-Pfad im Schema BoLZ_Direktzusage_v1 (für Entwickler). */
+  schemaPath: string;
   label: string;
-  /** Kurz, was in der Motorik gemeint ist */
   purpose: string;
   valueDisplay: string;
   status: SystemParamStatus;
@@ -38,8 +37,8 @@ function statusForText(
 }
 
 /**
- * Flache Liste von Parametern, die typischerweise in einer Berechnungs- /
- * Verwaltungslogik gepflegt werden müssen (nicht die vollständige VO-Dokumentation).
+ * Flache Liste von Parametern für Berechnungs- / Verwaltungslogik.
+ * `code` ist bewusst kurz; `schemaPath` mappt auf das Extraktions-JSON.
  */
 export function buildSystemCalculationParameterRows(
   data: VoBolzDirektzusageV1,
@@ -53,7 +52,6 @@ export function buildSystemCalculationParameterRows(
       value: string | number | null | undefined;
       kind: "number" | "text";
       needsReview?: boolean;
-      /** Nur Zahlen: Prozentanzeige aus Dezimal */
       displayPercent?: boolean;
     },
   ) => {
@@ -78,7 +76,8 @@ export function buildSystemCalculationParameterRows(
     }
     rows.push({
       category: r.category,
-      systemKey: r.systemKey,
+      code: r.code,
+      schemaPath: r.schemaPath,
       label: r.label,
       purpose: r.purpose,
       valueDisplay,
@@ -88,9 +87,10 @@ export function buildSystemCalculationParameterRows(
 
   push({
     category: "Zusage",
-    systemKey: "scheme.openForNewEntries",
+    code: "ZU_NEU",
+    schemaPath: "scheme.openForNewEntries",
     label: "Neueintritte erlaubt",
-    purpose: "Steuerung Zulassung / Datenmigration",
+    purpose: "Zulassung / Migration",
     value:
       scheme.openForNewEntries === null
         ? null
@@ -101,52 +101,58 @@ export function buildSystemCalculationParameterRows(
   });
 
   push({
-    category: "Beitrag / Ansparung",
-    systemKey: "contributions.employerContribution.rate",
-    label: "Arbeitgeber-Anteil (Dezimal)",
-    purpose: "Kapitalbildung aus Brutto / Bezugsgröße",
+    category: "Beitrag",
+    code: "BG_AG_SATZ",
+    schemaPath: "contributions.employerContribution.rate",
+    label: "Arbeitgeber-Anteil",
+    purpose: "Ansparzuschlag / Bezugsgröße",
     value: contributions.employerContribution.rate,
     kind: "number",
     displayPercent: true,
   });
   push({
-    category: "Beitrag / Ansparung",
-    systemKey: "contributions.employerContribution.base",
+    category: "Beitrag",
+    code: "BG_AG_BEZUG",
+    schemaPath: "contributions.employerContribution.base",
     label: "Bezugsgröße",
-    purpose: "Bemessungsgrundlage im System hinterlegen",
+    purpose: "Bemessungsgrundlage",
     value: contributions.employerContribution.base,
     kind: "text",
   });
   push({
-    category: "Beitrag / Ansparung",
-    systemKey: "contributions.employerContribution.salaryDefinition",
+    category: "Beitrag",
+    code: "BG_AG_BRUTTO",
+    schemaPath: "contributions.employerContribution.salaryDefinition",
     label: "Gehaltsdefinition",
-    purpose: "Welches Brutto zählt (Regelwerk)",
+    purpose: "Welches Brutto zählt",
     value: contributions.employerContribution.salaryDefinition,
     kind: "text",
     needsReview: true,
   });
   push({
-    category: "Beitrag / Ansparung",
-    systemKey: "contributions.employerContribution.salaryCap",
+    category: "Beitrag",
+    code: "BG_AG_DECKEL",
+    schemaPath: "contributions.employerContribution.salaryCap",
     label: "Deckel / Obergrenze",
-    purpose: "Cap für Beitragsbemessung",
+    purpose: "Beitragsbemessung cap",
     value: contributions.employerContribution.salaryCap,
     kind: "text",
   });
   push({
-    category: "Beitrag / Ansparung",
-    systemKey: "contributions.employerContribution.type",
+    category: "Beitrag",
+    code: "BG_AG_ART",
+    schemaPath: "contributions.employerContribution.type",
     label: "AG-Beitragsart",
-    purpose: "Art der Zuführung (z. B. fix, prozentual)",
+    purpose: "Art der Zuführung",
     value: contributions.employerContribution.type,
     kind: "text",
   });
   push({
-    category: "Beitrag / Ansparung",
-    systemKey: "contributions.employeeContribution.maxRate",
-    label: "AN-Höchstgrenze (Dezimal)",
-    purpose: "Optional: Entgeltumwandlung / Eigenbeitrag",
+    category: "Beitrag",
+    code: "BG_AN_MAX",
+    schemaPath: "contributions.employeeContribution.maxRate",
+    label: "AN-Höchstgrenze",
+    purpose: "Eigenbeitrag / Umwandlung",
     value: contributions.employeeContribution.maxRate,
     kind: "number",
     displayPercent: true,
@@ -154,79 +160,88 @@ export function buildSystemCalculationParameterRows(
 
   push({
     category: "Zugang",
-    systemKey: "eligibility.minAge.value",
+    code: "ZG_MIN_ALT",
+    schemaPath: "eligibility.minAge.value",
     label: "Mindestalter (Jahre)",
-    purpose: "Teilnahmealter im System",
+    purpose: "Teilnahmealter",
     value: eligibility.minAge.value,
     kind: "number",
   });
   push({
     category: "Zugang",
-    systemKey: "eligibility.waitingPeriod.months",
+    code: "ZG_WARTE",
+    schemaPath: "eligibility.waitingPeriod.months",
     label: "Wartezeit (Monate)",
-    purpose: "Wartezeitregel im Bestand",
+    purpose: "Wartezeitregel",
     value: eligibility.waitingPeriod.months,
     kind: "number",
   });
 
   push({
     category: "Unverfallbarkeit",
-    systemKey: "vesting.minServiceYears",
-    label: "Mindestbetriebszugehörigkeit (Jahre)",
-    purpose: "Vesting-Engine",
+    code: "UV_BJ",
+    schemaPath: "vesting.minServiceYears",
+    label: "Mindest-BZ (Jahre)",
+    purpose: "Vesting",
     value: vesting.minServiceYears,
     kind: "number",
   });
   push({
     category: "Unverfallbarkeit",
-    systemKey: "vesting.minAge",
-    label: "Mindestalter Unverfallbarkeit (Jahre)",
-    purpose: "Vesting-Engine",
+    code: "UV_MIN_ALT",
+    schemaPath: "vesting.minAge",
+    label: "Mindestalter UV (Jahre)",
+    purpose: "Vesting",
     value: vesting.minAge,
     kind: "number",
   });
   push({
     category: "Unverfallbarkeit",
-    systemKey: "vesting.rule",
-    label: "Unverfallbarkeitsregel (Text)",
-    purpose: "Regelwerk / Paragraphenbezug",
+    code: "UV_REGEL",
+    schemaPath: "vesting.rule",
+    label: "Unverfallbarkeitsregel",
+    purpose: "Normbezug",
     value: vesting.rule,
     kind: "text",
     needsReview: true,
   });
 
   push({
-    category: "Altersleistung",
-    systemKey: "benefits.oldAge.regularRetirementAge",
+    category: "Alter",
+    code: "ALT_RAG",
+    schemaPath: "benefits.oldAge.regularRetirementAge",
     label: "Regelaltersgrenze",
-    purpose: "Leistungsfall Altersrente / Auszahlungstermin",
+    purpose: "Leistungsalter",
     value: benefits.oldAge.regularRetirementAge,
     kind: "text",
     needsReview: true,
   });
   push({
-    category: "Altersleistung",
-    systemKey: "benefits.oldAge.guaranteedInterest",
-    label: "Garantiezins p.a. (Dezimal)",
-    purpose: "Kapitalverzinsung im System",
+    category: "Alter",
+    code: "ALT_GZINS",
+    schemaPath: "benefits.oldAge.guaranteedInterest",
+    label: "Garantiezins p.a.",
+    purpose: "Kapitalverzinsung",
     value: benefits.oldAge.guaranteedInterest,
     kind: "number",
     displayPercent: true,
   });
   push({
-    category: "Altersleistung",
-    systemKey: "benefits.oldAge.earlyRetirementReductionPerMonth",
-    label: "Vorzeit-Kürzung pro Monat (Dezimal)",
-    purpose: "Vorzeitige Inanspruchnahme",
+    category: "Alter",
+    code: "ALT_KZ_MON",
+    schemaPath: "benefits.oldAge.earlyRetirementReductionPerMonth",
+    label: "Vorzeit-Kürzung / Monat",
+    purpose: "Vorzeit",
     value: benefits.oldAge.earlyRetirementReductionPerMonth,
     kind: "number",
     displayPercent: true,
   });
   push({
-    category: "Altersleistung",
-    systemKey: "benefits.oldAge.formula",
-    label: "Leistungsformel Alter (Text)",
-    purpose: "Umsetzung im Leistungsmodul",
+    category: "Alter",
+    code: "ALT_FORMEL",
+    schemaPath: "benefits.oldAge.formula",
+    label: "Leistungsformel Alter",
+    purpose: "Leistungsmodul",
     value: benefits.oldAge.formula,
     kind: "text",
     needsReview: true,
@@ -234,63 +249,70 @@ export function buildSystemCalculationParameterRows(
 
   push({
     category: "Invalidität",
-    systemKey: "benefits.disability.qualifying",
-    label: "Invaliditäts-Voraussetzung (Text)",
-    purpose: "Biometrie / Anspruchslogik",
+    code: "INV_QUALI",
+    schemaPath: "benefits.disability.qualifying",
+    label: "Invaliditäts-Voraussetzung",
+    purpose: "Biometrie",
     value: benefits.disability.qualifying,
     kind: "text",
     needsReview: true,
   });
   push({
     category: "Invalidität",
-    systemKey: "benefits.disability.formula",
-    label: "Leistungsformel Invalidität (Text)",
-    purpose: "Umsetzung im Leistungsmodul",
+    code: "INV_FORMEL",
+    schemaPath: "benefits.disability.formula",
+    label: "Leistungsformel Inv.",
+    purpose: "Leistungsmodul",
     value: benefits.disability.formula,
     kind: "text",
     needsReview: true,
   });
 
   push({
-    category: "Hinterbliebene",
-    systemKey: "benefits.death.spouse.rate",
-    label: "Witwen-/Witwer-Anteil (Dezimal)",
-    purpose: "Todesfallkapital / Rente",
+    category: "Todesfall",
+    code: "TOD_EW",
+    schemaPath: "benefits.death.spouse.rate",
+    label: "Witwen-/Witwer-Anteil",
+    purpose: "Hinterbliebene",
     value: benefits.death.spouse.rate,
     kind: "number",
     displayPercent: true,
   });
   push({
-    category: "Hinterbliebene",
-    systemKey: "benefits.death.orphan.halfOrphan",
-    label: "Halbwaise (Dezimal)",
-    purpose: "Todesfall",
+    category: "Todesfall",
+    code: "TOD_HW",
+    schemaPath: "benefits.death.orphan.halfOrphan",
+    label: "Halbwaise",
+    purpose: "Hinterbliebene",
     value: benefits.death.orphan.halfOrphan,
     kind: "number",
     displayPercent: true,
   });
   push({
-    category: "Hinterbliebene",
-    systemKey: "benefits.death.orphan.fullOrphan",
-    label: "Vollwaise (Dezimal)",
-    purpose: "Todesfall",
+    category: "Todesfall",
+    code: "TOD_VW",
+    schemaPath: "benefits.death.orphan.fullOrphan",
+    label: "Vollwaise",
+    purpose: "Hinterbliebene",
     value: benefits.death.orphan.fullOrphan,
     kind: "number",
     displayPercent: true,
   });
   push({
-    category: "Hinterbliebene",
-    systemKey: "benefits.death.orphan.maxAge",
-    label: "Höchstalter Waise (Jahre)",
-    purpose: "Todesfall",
+    category: "Todesfall",
+    code: "TOD_W_ALT",
+    schemaPath: "benefits.death.orphan.maxAge",
+    label: "Höchstalter Waise",
+    purpose: "Hinterbliebene",
     value: benefits.death.orphan.maxAge,
     kind: "number",
   });
   push({
-    category: "Hinterbliebene",
-    systemKey: "benefits.death.spouse.remarriage",
-    label: "Wiederheirat (Regelung)",
-    purpose: "Leistungsfortzahlung / Wegfall",
+    category: "Todesfall",
+    code: "TOD_WH",
+    schemaPath: "benefits.death.spouse.remarriage",
+    label: "Wiederheirat",
+    purpose: "Leistungswegfall",
     value: benefits.death.spouse.remarriage,
     kind: "text",
     needsReview: true,
@@ -298,18 +320,20 @@ export function buildSystemCalculationParameterRows(
 
   push({
     category: "Dynamik",
-    systemKey: "adjustment.rule",
-    label: "Anpassungsregel (Text)",
-    purpose: "Index / Nachverzinsung",
+    code: "DYN_REGEL",
+    schemaPath: "adjustment.rule",
+    label: "Anpassungsregel",
+    purpose: "Index / Fortschreibung",
     value: adjustment.rule,
     kind: "text",
     needsReview: true,
   });
   push({
     category: "Dynamik",
-    systemKey: "adjustment.method",
+    code: "DYN_METH",
+    schemaPath: "adjustment.method",
     label: "Anpassungsmethode",
-    purpose: "Technische Umsetzung der Fortschreibung",
+    purpose: "Technik",
     value: adjustment.method,
     kind: "text",
     needsReview: true,

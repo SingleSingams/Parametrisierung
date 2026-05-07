@@ -13,16 +13,17 @@ const goldPath = path.join(
 );
 
 describe("buildSystemCalculationParameterRows", () => {
-  it("liefert eine flache Implementierungsliste mit erwarteten Schlüsseln", () => {
+  it("liefert eine flache Implementierungsliste mit Kurzcodes und JSON-Pfaden", () => {
     const raw = JSON.parse(readFileSync(goldPath, "utf8")) as unknown;
     const parsed = voBolzDirektzusageV1Schema.parse(raw);
     const rows = buildSystemCalculationParameterRows(parsed);
-    const keys = rows.map((r) => r.systemKey);
-    expect(keys).toContain("contributions.employerContribution.rate");
-    expect(keys).toContain("benefits.oldAge.guaranteedInterest");
+    const paths = rows.map((r) => r.schemaPath);
+    expect(paths).toContain("contributions.employerContribution.rate");
+    expect(paths).toContain("benefits.oldAge.guaranteedInterest");
+    expect(rows.some((r) => r.code === "BG_AG_SATZ")).toBe(true);
     expect(rows.length).toBeGreaterThanOrEqual(20);
     const rateRow = rows.find(
-      (r) => r.systemKey === "contributions.employerContribution.rate",
+      (r) => r.schemaPath === "contributions.employerContribution.rate",
     );
     expect(rateRow?.status).toBe("ok");
   });
