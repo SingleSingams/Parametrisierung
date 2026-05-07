@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { CalculationParameterChecklist } from "@/components/calculation-parameter-checklist";
 import { CalculationWorkbench } from "@/components/calculation-workbench";
 import {
   ExtractionParameterGroups,
@@ -10,7 +11,7 @@ import {
 } from "@/components/extraction-summary";
 import type { VoBolzDirektzusageV1 } from "@/lib/schema";
 
-type ResultTab = "brief" | "params" | "calc";
+type ResultTab = "brief" | "params" | "system" | "calc";
 
 const NAV: {
   id: ResultTab;
@@ -26,15 +27,21 @@ const NAV: {
   },
   {
     id: "params",
-    label: "Parameterliste",
-    short: "Parameter",
-    desc: "Nach Typ sortiert, mit Quellen",
+    label: "VO-Parameter",
+    short: "VO",
+    desc: "Vollständig mit Quellen",
+  },
+  {
+    id: "system",
+    label: "System & Berechnung",
+    short: "System",
+    desc: "Pflichtparameter für Ihre Logik",
   },
   {
     id: "calc",
     label: "Berechnungsbereich",
     short: "Rechner",
-    desc: "Eigene Zahlen durchspielen",
+    desc: "Beispiele mit Ihren Zahlen",
   },
 ];
 
@@ -44,9 +51,14 @@ const tabHeadline: Record<ResultTab, { title: string; subtitle: string }> = {
     subtitle: "Lesart der KI in wenigen Sätzen und Kennzahlen.",
   },
   params: {
-    title: "Parameterliste",
+    title: "VO-Parameter",
     subtitle:
-      "Jede Zeile ist ein extrahierter Parameter. Typ-Codes gruppieren inhaltlich zusammengehörige Angaben.",
+      "Auszug aus der Versorgungsordnung — typisiert, mit Quellen und Sprungmarken.",
+  },
+  system: {
+    title: "System & Berechnung",
+    subtitle:
+      "Flache Liste: welche Kennzahlen Sie in Ihrer Software pflegen müssen, inkl. stabiler System-Schlüssel.",
   },
   calc: {
     title: "Berechnungsbereich",
@@ -92,6 +104,19 @@ function IconList({ className }: { className?: string }) {
   );
 }
 
+function IconTable({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 5h16v14H4V5zm0 4h16M10 5v14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function IconCalc({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -117,14 +142,15 @@ function IconCalc({ className }: { className?: string }) {
 const tabIcons: Record<ResultTab, typeof IconBrief> = {
   brief: IconBrief,
   params: IconList,
+  system: IconTable,
   calc: IconCalc,
 };
 
 export function ResultsWorkspace({ data, rawJson }: Props) {
-  const [tab, setTab] = useState<ResultTab>("brief");
+  const [tab, setTab] = useState<ResultTab>("system");
 
   useEffect(() => {
-    setTab("brief");
+    setTab("system");
   }, [data]);
 
   const docTitle = data.metadata.documentName?.trim() || "Extraktion";
@@ -151,7 +177,7 @@ export function ResultsWorkspace({ data, rawJson }: Props) {
           <p className="hidden px-4 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400 md:block">
             Menü
           </p>
-          <ul className="grid grid-cols-3 divide-x divide-zinc-200 md:flex md:flex-col md:gap-1 md:divide-x-0 md:p-3 dark:divide-zinc-800">
+          <ul className="grid grid-cols-2 divide-x divide-y divide-zinc-200 md:flex md:flex-col md:gap-1 md:divide-x-0 md:divide-y-0 md:p-3 dark:divide-zinc-800">
             {NAV.map((item) => {
               const active = tab === item.id;
               const Icon = tabIcons[item.id];
@@ -212,6 +238,7 @@ export function ResultsWorkspace({ data, rawJson }: Props) {
                 <ExtractionRawJsonPanel rawJson={rawJson} />
               </div>
             ) : null}
+            {tab === "system" ? <CalculationParameterChecklist data={data} /> : null}
             {tab === "calc" ? (
               <div
                 className="rounded-2xl border-2 border-indigo-300/70 bg-gradient-to-b from-indigo-50/90 via-white to-emerald-50/40 p-4 shadow-inner dark:border-indigo-700/60 dark:from-indigo-950/50 dark:via-zinc-950 dark:to-emerald-950/20 md:p-6"

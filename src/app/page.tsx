@@ -157,9 +157,10 @@ export default function Home() {
           </h1>
           <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
             Versorgungsordnung hochladen (PDF, DOCX oder TXT). Anschließend steuern Sie
-            per <strong>Seitenmenü</strong> zwischen <strong>Kurzfassung</strong>, der{" "}
-            <strong>Parameterliste nach Typ</strong> (Tabellen + Quellen) und dem{" "}
-            <strong>eigenen Berechnungsbereich</strong>. Ohne eigene VO:{" "}
+            per <strong>Seitenmenü</strong> zwischen <strong>Kurzfassung</strong>,{" "}
+            <strong>VO-Parametern</strong> (mit Quellen), der{" "}
+            <strong>System-Checkliste für Berechnungen</strong> und dem{" "}
+            <strong>Rechner</strong>. Ohne eigene VO:{" "}
             <a
               href="/demo-vo.txt"
               download
@@ -237,8 +238,8 @@ export default function Home() {
             </p>
             <p className="mt-2">
               Nach erfolgreicher Extraktion erscheint hier die Auswertung mit{" "}
-              <strong>festem Seitenmenü</strong> (Kurzfassung, Parameterliste,
-              Berechnungsbereich).
+              <strong>festem Seitenmenü</strong> (Kurzfassung, VO-Parameter, System für
+              Berechnungen, Rechner).
             </p>
           </aside>
         )}
