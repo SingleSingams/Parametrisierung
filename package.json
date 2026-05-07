@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "extract": "tsx scripts/extract-cli.ts",
+    "postinstall": "node scripts/copy-pdfjs-worker.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "test": "vitest run",

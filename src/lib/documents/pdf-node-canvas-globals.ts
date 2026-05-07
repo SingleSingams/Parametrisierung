@@ -1,21 +1,23 @@
 /**
  * pdf.js (über pdf-parse) im Node-/Serverless-Umfeld:
  *
- * 1) **Canvas-Globals** (`DOMMatrix`, `Path2D`, `ImageData`) — sonst z. B.
- *    „DOMMatrix is not defined“ bei manchen PDFs.
- * 2) **Worker-URL** für den pdf.js-**Fake-Worker** (Node: echte Web Workers gibt es nicht):
- *    pdf.js macht `await import(workerSrc)`. Das darf in Node **kein** `https:`-URL sein
- *    (Standard-ESM-Loader lehnt ab). Wenn die Worker-Datei nicht unter
- *    `cwd/node_modules/...` liegt (Vercel-Layout), laden wir sie per **fetch** von jsDelivr
- *    und legen sie unter **`/tmp`** ab — dann `file:`-URL.
+ * 1) **Canvas-Globals** (`DOMMatrix`, `Path2D`, `ImageData`)
+ * 2) **Worker-URL** für den pdf.js-**Fake-Worker** (Node): `import(workerSrc)` braucht
+ *    eine existierende **file:**-URL. Auf Vercel fehlt `pdf.worker.mjs` oft unter
+ *    `node_modules` → wir legen eine Kopie per **postinstall** nach `public/vendor/pdfjs/`
+ *    und nutzen die zuerst; sonst node_modules, sonst Download nach `/tmp`.
+ *
+ * `PDFParse.setWorker` stellt sicher, dass pdf-parse dieselbe pdf.js-Instanz nutzt.
  */
 import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+/** Muss zu `package.json` / `pdfjs-dist` passen (CDN-Fallback). */
+const PDFJS_DIST_VERSION = "5.4.296";
+
 let canvasReady = false;
-let workerReady = false;
 /** Gecachte `file:`-URL zum Worker (lokal oder unter /tmp materialisiert). */
 let cachedWorkerHref: string | null = null;
 
@@ -31,7 +33,7 @@ async function ensureCanvasGlobals(): Promise<void> {
   canvasReady = true;
 }
 
-async function resolveWorkerFileUrl(version: string): Promise<string> {
+async function resolveWorkerFileUrl(): Promise<string> {
   if (cachedWorkerHref) {
     try {
       const p = fileURLToPath(cachedWorkerHref);
@@ -43,8 +45,14 @@ async function resolveWorkerFileUrl(version: string): Promise<string> {
   }
 
   const names = ["pdf.worker.min.mjs", "pdf.worker.mjs"] as const;
-  const localDir = join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build");
 
+  const vendored = join(process.cwd(), "public", "vendor", "pdfjs", "pdf.worker.mjs");
+  if (existsSync(vendored)) {
+    cachedWorkerHref = pathToFileURL(vendored).href;
+    return cachedWorkerHref;
+  }
+
+  const localDir = join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build");
   for (const name of names) {
     const p = join(localDir, name);
     if (existsSync(p)) {
@@ -53,7 +61,7 @@ async function resolveWorkerFileUrl(version: string): Promise<string> {
     }
   }
 
-  const cdnBase = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/legacy/build`;
+  const cdnBase = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_DIST_VERSION}/legacy/build`;
   for (const name of names) {
     const url = `${cdnBase}/${name}`;
     const res = await fetch(url, { redirect: "follow" });
@@ -67,20 +75,21 @@ async function resolveWorkerFileUrl(version: string): Promise<string> {
   }
 
   throw new Error(
-    "pdf.js-Worker konnte weder aus node_modules noch per CDN nach /tmp geladen werden.",
+    "pdf.js-Worker konnte nicht bereitgestellt werden (public/vendor, node_modules, CDN).",
   );
 }
 
 /**
- * Muss vor `import("pdf-parse")` / `new PDFParse(...)` laufen (gemeinsames pdf.js-Modul).
+ * Muss vor `new PDFParse(...)` laufen.
  */
 export async function preparePdfJsServerEnvironment(): Promise<void> {
   await ensureCanvasGlobals();
-  if (workerReady) return;
+
+  const workerHref = await resolveWorkerFileUrl();
 
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const { GlobalWorkerOptions, version } = pdfjs;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerHref;
 
-  GlobalWorkerOptions.workerSrc = await resolveWorkerFileUrl(version);
-  workerReady = true;
+  const { PDFParse } = await import("pdf-parse");
+  PDFParse.setWorker(workerHref);
 }
