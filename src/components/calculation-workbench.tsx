@@ -51,9 +51,11 @@ function StepList({ result }: { result: BenefitComputationResult }) {
 
 type Props = {
   extraction: VoBolzDirektzusageV1 | null;
+  /** Reduziert Kopfzeilen, wenn der äußere Bereich (Berechnungslabor) schon erklärt. */
+  compactChrome?: boolean;
 };
 
-export function CalculationWorkbench({ extraction }: Props) {
+export function CalculationWorkbench({ extraction, compactChrome }: Props) {
   const defaults = useMemo(() => {
     const rate = extraction?.contributions.employerContribution.rate ?? 0.04;
     const g = extraction?.benefits.oldAge.guaranteedInterest ?? 0.0125;
@@ -115,25 +117,33 @@ export function CalculationWorkbench({ extraction }: Props) {
 
   return (
     <section className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
-      <div
-        className="h-1 w-full bg-gradient-to-r from-indigo-500 via-emerald-500 to-violet-500"
-        aria-hidden
-      />
-      <div className="space-y-5 p-5 sm:p-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-            Interaktiv
+      {!compactChrome ? (
+        <div
+          className="h-1 w-full bg-gradient-to-r from-indigo-500 via-emerald-500 to-violet-500"
+          aria-hidden
+        />
+      ) : null}
+      <div className={`space-y-5 ${compactChrome ? "p-4 sm:p-5" : "p-5 sm:p-6"}`}>
+        {!compactChrome ? (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+              Interaktiv
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Rechner (Skelett)
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Nutzen Sie die aus der VO übernommenen Sätze oder passen Sie sie an, und
+              spielen Sie Beispiel-Bruttolöhne durch. Die Logik ist bewusst einfach
+              (linear, ohne Biometrie) — zum Verständnis und zum Abgleich, nicht für die
+              Schlussprüfung.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Sätze aus der Extraktion sind vorbefüllt und können hier angepasst werden.
           </p>
-          <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Rechner (Skelett)
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Nutzen Sie die aus der VO übernommenen Sätze oder passen Sie sie an, und
-            spielen Sie Beispiel-Bruttolöhne durch. Die Logik ist bewusst einfach
-            (linear, ohne Biometrie) — zum Verständnis und zum Abgleich, nicht für die
-            Schlussprüfung.
-          </p>
-        </div>
+        )}
 
         <div className="space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
           <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">

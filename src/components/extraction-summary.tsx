@@ -39,50 +39,123 @@ function SourceBox({
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function ParamTable({ rows }: { rows: { param: string; value: string }[] }) {
+  if (rows.length === 0) return null;
   return (
-    <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:gap-4">
-      <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
-      <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{value}</dd>
+    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <table className="w-full min-w-[300px] text-sm">
+        <thead>
+          <tr className="border-b border-zinc-200 bg-zinc-100 text-left dark:border-zinc-800 dark:bg-zinc-900">
+            <th
+              scope="col"
+              className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+            >
+              Parameter
+            </th>
+            <th
+              scope="col"
+              className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+            >
+              Wert
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr
+              key={i}
+              className="border-b border-zinc-100 last:border-0 odd:bg-white even:bg-zinc-50/70 dark:border-zinc-800/80 dark:odd:bg-zinc-950/20 dark:even:bg-zinc-900/40"
+            >
+              <th
+                scope="row"
+                className="px-4 py-2.5 text-left font-normal text-zinc-600 dark:text-zinc-400"
+              >
+                {r.param}
+              </th>
+              <td className="px-4 py-2.5 text-right font-medium text-zinc-900 dark:text-zinc-100">
+                {r.value}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function GroupCard({
+function TypedParameterSection({
+  id,
+  typeCode,
   title,
-  subtitle,
-  accent,
+  description,
   children,
 }: {
+  id: string;
+  typeCode: string;
   title: string;
-  subtitle?: string;
-  accent: "slate" | "indigo" | "emerald" | "amber" | "violet";
+  description: string;
   children: ReactNode;
 }) {
-  const bar =
-    accent === "indigo"
-      ? "bg-indigo-500"
-      : accent === "emerald"
-        ? "bg-emerald-500"
-        : accent === "amber"
-          ? "bg-amber-500"
-          : accent === "violet"
-            ? "bg-violet-500"
-            : "bg-zinc-400";
-
   return (
-    <article className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
-      <div className={`h-1 w-full ${bar}`} aria-hidden />
-      <div className="p-5">
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          {title}
-        </h3>
-        {subtitle ? (
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
-        ) : null}
-        <div className="mt-4">{children}</div>
+    <section
+      id={id}
+      className="scroll-mt-32 border-b border-zinc-200 pb-10 last:border-b-0 last:pb-0 dark:border-zinc-800"
+    >
+      <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-wrap items-start gap-3">
+          <span
+            className="mt-0.5 shrink-0 rounded border border-zinc-300 bg-zinc-900 px-2 py-1 font-mono text-[10px] font-bold tracking-[0.15em] text-white dark:border-zinc-600 dark:bg-zinc-100 dark:text-zinc-900"
+            title="Typ / Gruppencode"
+          >
+            {typeCode}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              {title}
+            </h3>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              {description}
+            </p>
+          </div>
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+const PARAM_JUMP_LINKS: { id: string; label: string }[] = [
+  { id: "param-gruppe-rahmen", label: "Rahmen" },
+  { id: "param-gruppe-zusage", label: "Zusage" },
+  { id: "param-gruppe-zugang", label: "Zugang" },
+  { id: "param-gruppe-beitrag", label: "Beitrag" },
+  { id: "param-gruppe-unverfall", label: "Unverfallbarkeit" },
+  { id: "param-gruppe-leistung", label: "Leistung" },
+  { id: "param-gruppe-anpassung", label: "Anpassung" },
+  { id: "param-gruppe-offen", label: "Offen" },
+];
+
+function ParameterSubnav() {
+  return (
+    <nav
+      className="-mx-4 mb-8 flex flex-wrap gap-2 border-b border-zinc-200 px-4 pb-4 md:mx-0 md:rounded-xl md:border md:bg-zinc-50/90 md:px-4 md:py-3 dark:border-zinc-800 dark:bg-zinc-900/50"
+      aria-label="Zu Parametergruppen springen"
+    >
+      <span className="hidden w-full text-[10px] font-bold uppercase tracking-widest text-zinc-400 md:block">
+        In der Liste springen
+      </span>
+      <div className="flex w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap [&::-webkit-scrollbar]:hidden">
+        {PARAM_JUMP_LINKS.map((item) => (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            className="shrink-0 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:border-indigo-400 hover:text-indigo-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-indigo-500 dark:hover:text-white"
+          >
+            {item.label}
+          </a>
+        ))}
       </div>
-    </article>
+    </nav>
   );
 }
 
@@ -206,250 +279,314 @@ export function ExtractionParameterGroups({ data }: { data: VoBolzDirektzusageV1
     openQuestions,
   } = data;
 
+  const schemeOpenLabel =
+    scheme.openForNewEntries === null ? "—" : scheme.openForNewEntries ? "Ja" : "Nein";
+
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Werte sind nach Typ gruppiert: Rahmenangaben, Zusage, Zugang, Beiträge und
-        Bezugsgrößen, Unverfallbarkeit, Leistungsfaktoren und Anpassung. Graue Kästen
-        zeigen Fundstellen in der VO.
+    <div className="space-y-0">
+      <ParameterSubnav />
+
+      <p className="mb-10 text-sm text-zinc-600 dark:text-zinc-400">
+        Unten finden Sie eine <strong>Parameterliste</strong>: eine Zeile pro erkanntem
+        Feld, gruppiert nach <strong>Typ-Codes</strong> (Rahmen, Zusage, Beitrag …).
+        Unter den Tabellen stehen die Fundstellen in der VO.
       </p>
 
-      <GroupCard
+      <TypedParameterSection
+        id="param-gruppe-rahmen"
+        typeCode="RAHMEN"
         title="Rahmenangaben & Dokument"
-        subtitle="Datei, Stand, Modell, Vertrauen in die Extraktion"
-        accent="slate"
+        description="Dateiname, Stand der VO, Extraktionszeitpunkt, Modell, Vertrauen in die Lesart."
       >
-        <dl className="space-y-2">
-          <Field label="Datei" value={formatDash(metadata.documentName)} />
-          <Field label="Stand laut VO" value={formatDash(metadata.documentDate)} />
-          <Field
-            label="Extraktion"
-            value={
-              metadata.extractedAt
+        <ParamTable
+          rows={[
+            { param: "Datei", value: formatDash(metadata.documentName) },
+            { param: "Stand laut VO", value: formatDash(metadata.documentDate) },
+            {
+              param: "Extraktion (Zeitpunkt)",
+              value: metadata.extractedAt
                 ? new Date(metadata.extractedAt).toLocaleString("de-DE")
-                : "—"
-            }
-          />
-          <Field label="Modell" value={formatDash(metadata.modelVersion)} />
-          <Field label="Qualität (KI)" value={confidenceDe(metadata.confidence)} />
-        </dl>
-      </GroupCard>
+                : "—",
+            },
+            { param: "Modell", value: formatDash(metadata.modelVersion) },
+            { param: "Qualität (KI)", value: confidenceDe(metadata.confidence) },
+          ]}
+        />
+      </TypedParameterSection>
 
-      <GroupCard
+      <TypedParameterSection
+        id="param-gruppe-zusage"
+        typeCode="ZUSAGE"
         title="Zusage & Rahmen"
-        subtitle="Art der Zusage, Durchführung, Zulassung neuer Eintritte"
-        accent="indigo"
+        description="Art der Zusage, Durchführungsweg, ob neue Eintritte möglich sind."
       >
-        <dl className="space-y-2">
-          <Field label="Art" value={scheme.type} />
-          <Field label="Durchführung" value={scheme.implementation} />
-          <Field
-            label="Für neue Eintritte geöffnet"
-            value={
-              scheme.openForNewEntries === null
-                ? "—"
-                : scheme.openForNewEntries
-                  ? "Ja"
-                  : "Nein"
-            }
-          />
-          <Field label="Schließung" value={formatDash(scheme.closingDate)} />
-        </dl>
-      </GroupCard>
+        <ParamTable
+          rows={[
+            { param: "Art der Zusage", value: scheme.type },
+            { param: "Durchführung", value: scheme.implementation },
+            { param: "Für neue Eintritte geöffnet", value: schemeOpenLabel },
+            { param: "Schließung / Ende", value: formatDash(scheme.closingDate) },
+          ]}
+        />
+      </TypedParameterSection>
 
-      <GroupCard
+      <TypedParameterSection
+        id="param-gruppe-zugang"
+        typeCode="ZUGANG"
         title="Zugang, Wartezeit & Ausschlüsse"
-        subtitle="Wer darf teilnehmen, wie lange muss gewartet werden"
-        accent="indigo"
+        description="Teilnahmevoraussetzungen und ausgeschlossene Personengruppen."
       >
-        <dl className="space-y-2">
-          <Field
-            label="Mindestalter (Jahre)"
-            value={formatNumberDe(eligibility.minAge.value)}
-          />
-          <SourceBox title="Quelle Mindestalter" source={eligibility.minAge.source} />
-          <Field
-            label="Wartezeit (Monate)"
-            value={formatNumberDe(eligibility.waitingPeriod.months)}
-          />
-          <SourceBox
-            title="Quelle Wartezeit"
-            source={eligibility.waitingPeriod.source}
-          />
-          <Field
-            label="Ausgeschlossene Gruppen"
-            value={
-              eligibility.excludedGroups.length
+        <ParamTable
+          rows={[
+            {
+              param: "Mindestalter (Jahre)",
+              value: formatNumberDe(eligibility.minAge.value),
+            },
+            {
+              param: "Wartezeit (Monate)",
+              value: formatNumberDe(eligibility.waitingPeriod.months),
+            },
+            {
+              param: "Ausgeschlossene Gruppen",
+              value: eligibility.excludedGroups.length
                 ? eligibility.excludedGroups.join(", ")
-                : "—"
-            }
-          />
-        </dl>
-      </GroupCard>
+                : "—",
+            },
+          ]}
+        />
+        <SourceBox title="Quelle Mindestalter" source={eligibility.minAge.source} />
+        <SourceBox title="Quelle Wartezeit" source={eligibility.waitingPeriod.source} />
+      </TypedParameterSection>
 
-      <GroupCard
+      <TypedParameterSection
+        id="param-gruppe-beitrag"
+        typeCode="BEITRAG"
         title="Beiträge, Bezugsgrößen & Gehalt"
-        subtitle="Sätze und Definitionen, auf denen Beiträge beruhen"
-        accent="emerald"
+        description="Sätze und Definitionen der Bezugsgröße — getrennt nach Arbeitgeber und Arbeitnehmer."
       >
-        <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Arbeitgeber
+        <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">
+          Arbeitgeberbeitrag
         </h4>
-        <dl className="mt-2 space-y-2">
-          <Field
-            label="Art"
-            value={formatDash(contributions.employerContribution.type)}
-          />
-          <Field
-            label="Satz"
-            value={formatPercentFromDecimal(contributions.employerContribution.rate)}
-          />
-          <Field
-            label="Bezugsgröße"
-            value={formatDash(contributions.employerContribution.base)}
-          />
-          <Field
-            label="Gehaltsdefinition"
-            value={formatDash(contributions.employerContribution.salaryDefinition)}
-          />
-          <Field
-            label="Deckel"
-            value={formatDash(contributions.employerContribution.salaryCap)}
-          />
-        </dl>
+        <ParamTable
+          rows={[
+            {
+              param: "Art",
+              value: formatDash(contributions.employerContribution.type),
+            },
+            {
+              param: "Satz",
+              value: formatPercentFromDecimal(contributions.employerContribution.rate),
+            },
+            {
+              param: "Bezugsgröße",
+              value: formatDash(contributions.employerContribution.base),
+            },
+            {
+              param: "Gehaltsdefinition",
+              value: formatDash(contributions.employerContribution.salaryDefinition),
+            },
+            {
+              param: "Deckel / Obergrenze",
+              value: formatDash(contributions.employerContribution.salaryCap),
+            },
+          ]}
+        />
         <SourceBox
           title="Quelle Arbeitgeberbeitrag"
           source={contributions.employerContribution.source}
         />
-        <h4 className="mt-5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Arbeitnehmer (optional)
+
+        <h4 className="mb-2 mt-8 text-xs font-bold uppercase tracking-wide text-zinc-500">
+          Arbeitnehmerbeitrag (optional)
         </h4>
-        <dl className="mt-2 space-y-2">
-          <Field
-            label="Art"
-            value={formatDash(contributions.employeeContribution.type)}
-          />
-          <Field
-            label="Höchstbetrag"
-            value={formatPercentFromDecimal(contributions.employeeContribution.maxRate)}
-          />
-        </dl>
+        <ParamTable
+          rows={[
+            {
+              param: "Art",
+              value: formatDash(contributions.employeeContribution.type),
+            },
+            {
+              param: "Höchstbetrag / Grenze",
+              value: formatPercentFromDecimal(
+                contributions.employeeContribution.maxRate,
+              ),
+            },
+          ]}
+        />
         <SourceBox
           title="Quelle Arbeitnehmerbeitrag"
           source={contributions.employeeContribution.source}
         />
-      </GroupCard>
+      </TypedParameterSection>
 
-      <GroupCard
+      <TypedParameterSection
+        id="param-gruppe-unverfall"
+        typeCode="UNVERFALL"
         title="Unverfallbarkeit"
-        subtitle="Wann Ansprüche bestehen bleiben"
-        accent="amber"
+        description="Wann Ansprüche unverfallbar werden — Regelwerk und Mindestanforderungen."
       >
-        <dl className="space-y-2">
-          <Field label="Regelwerk" value={formatDash(vesting.rule)} />
-          <Field
-            label="Mindestbetriebszugehörigkeit (Jahre)"
-            value={formatNumberDe(vesting.minServiceYears)}
-          />
-          <Field label="Mindestalter (Jahre)" value={formatNumberDe(vesting.minAge)} />
-        </dl>
+        <ParamTable
+          rows={[
+            { param: "Regelwerk", value: formatDash(vesting.rule) },
+            {
+              param: "Mindestbetriebszugehörigkeit (Jahre)",
+              value: formatNumberDe(vesting.minServiceYears),
+            },
+            {
+              param: "Mindestalter (Jahre)",
+              value: formatNumberDe(vesting.minAge),
+            },
+          ]}
+        />
         <SourceBox title="Quelle Unverfallbarkeit" source={vesting.source} />
-      </GroupCard>
+      </TypedParameterSection>
 
-      <GroupCard
+      <TypedParameterSection
+        id="param-gruppe-leistung"
+        typeCode="LEISTUNG"
         title="Leistungen & Faktoren"
-        subtitle="Alter, Invalidität, Hinterbliebene — inkl. Sätze und Formeln"
-        accent="violet"
+        description="Alters-, Invaliditäts- und Hinterbliebenenregeln inkl. Sätze und Formeltexte."
       >
-        <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Alter</h4>
-        <dl className="mt-2 space-y-2">
-          <Field
-            label="Regelaltersgrenze"
-            value={formatDash(benefits.oldAge.regularRetirementAge)}
-          />
-          <Field
-            label="Vorzeit-Kürzung pro Monat"
-            value={formatPercentFromDecimal(
-              benefits.oldAge.earlyRetirementReductionPerMonth,
-            )}
-          />
-          <Field label="Formel (Text)" value={formatDash(benefits.oldAge.formula)} />
-          <Field
-            label="Garantierter Zins pro Jahr"
-            value={formatPercentFromDecimal(benefits.oldAge.guaranteedInterest)}
-          />
-        </dl>
+        <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">
+          Altersleistung
+        </h4>
+        <ParamTable
+          rows={[
+            {
+              param: "Regelaltersgrenze",
+              value: formatDash(benefits.oldAge.regularRetirementAge),
+            },
+            {
+              param: "Vorzeit-Kürzung pro Monat",
+              value: formatPercentFromDecimal(
+                benefits.oldAge.earlyRetirementReductionPerMonth,
+              ),
+            },
+            {
+              param: "Formel (Text)",
+              value: formatDash(benefits.oldAge.formula),
+            },
+            {
+              param: "Garantierter Zins p.a.",
+              value: formatPercentFromDecimal(benefits.oldAge.guaranteedInterest),
+            },
+          ]}
+        />
         <SourceBox title="Quelle Altersleistung" source={benefits.oldAge.source} />
 
-        <h4 className="mt-5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <h4 className="mb-2 mt-8 text-xs font-bold uppercase tracking-wide text-zinc-500">
           Invalidität
         </h4>
-        <dl className="mt-2 space-y-2">
-          <Field
-            label="Anspruchsvoraussetzung"
-            value={formatDash(benefits.disability.qualifying)}
-          />
-          <Field label="Formel" value={formatDash(benefits.disability.formula)} />
-        </dl>
+        <ParamTable
+          rows={[
+            {
+              param: "Anspruchsvoraussetzung",
+              value: formatDash(benefits.disability.qualifying),
+            },
+            { param: "Formel (Text)", value: formatDash(benefits.disability.formula) },
+          ]}
+        />
         <SourceBox title="Quelle Invalidität" source={benefits.disability.source} />
 
-        <h4 className="mt-5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Tod
+        <h4 className="mb-2 mt-8 text-xs font-bold uppercase tracking-wide text-zinc-500">
+          Hinterbliebene (Tod)
         </h4>
-        <dl className="mt-2 space-y-2">
-          <Field
-            label="Ehepartner-Anteil"
-            value={formatPercentFromDecimal(benefits.death.spouse.rate)}
-          />
-          <Field
-            label="Wiederheirat"
-            value={formatDash(benefits.death.spouse.remarriage)}
-          />
-        </dl>
+        <ParamTable
+          rows={[
+            {
+              param: "Ehepartner-Anteil",
+              value: formatPercentFromDecimal(benefits.death.spouse.rate),
+            },
+            {
+              param: "Wiederheirat (Regelung)",
+              value: formatDash(benefits.death.spouse.remarriage),
+            },
+            {
+              param: "Halbwaisen-Anteil",
+              value: formatPercentFromDecimal(benefits.death.orphan.halfOrphan),
+            },
+            {
+              param: "Vollwaisen-Anteil",
+              value: formatPercentFromDecimal(benefits.death.orphan.fullOrphan),
+            },
+            {
+              param: "Höchstalter Waise (Jahre)",
+              value: formatNumberDe(benefits.death.orphan.maxAge),
+            },
+          ]}
+        />
         <SourceBox title="Quelle Ehepartner" source={benefits.death.spouse.source} />
-        <dl className="mt-3 space-y-2">
-          <Field
-            label="Halbwaisen"
-            value={formatPercentFromDecimal(benefits.death.orphan.halfOrphan)}
-          />
-          <Field
-            label="Vollwaisen"
-            value={formatPercentFromDecimal(benefits.death.orphan.fullOrphan)}
-          />
-          <Field
-            label="Höchstalter Waise"
-            value={formatNumberDe(benefits.death.orphan.maxAge)}
-          />
-        </dl>
         <SourceBox title="Quelle Waisen" source={benefits.death.orphan.source} />
-      </GroupCard>
+      </TypedParameterSection>
 
-      <GroupCard
+      <TypedParameterSection
+        id="param-gruppe-anpassung"
+        typeCode="ANPASSUNG"
         title="Anpassung dynamischer Leistungen"
-        subtitle="Wie Leistungen fortgeschrieben werden"
-        accent="slate"
+        description="Regeln zur Fortschreibung dynamischer Leistungsbestandteile."
       >
-        <dl className="space-y-2">
-          <Field label="Regel" value={formatDash(adjustment.rule)} />
-          <Field label="Methode" value={formatDash(adjustment.method)} />
-        </dl>
+        <ParamTable
+          rows={[
+            { param: "Regel (Text)", value: formatDash(adjustment.rule) },
+            { param: "Methode", value: formatDash(adjustment.method) },
+          ]}
+        />
         <SourceBox title="Quelle Anpassung" source={adjustment.source} />
-      </GroupCard>
+      </TypedParameterSection>
 
-      {openQuestions.length ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-5 dark:border-amber-900 dark:bg-amber-950/40">
-          <h3 className="text-base font-semibold text-amber-950 dark:text-amber-100">
-            Offene Punkte (manuell prüfen)
-          </h3>
-          <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-amber-950 dark:text-amber-100">
-            {openQuestions.map((q, i) => (
-              <li key={i}>
-                <span className="font-medium">{q.topic}</span> ({q.urgency}): {q.reason}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <TypedParameterSection
+        id="param-gruppe-offen"
+        typeCode="OFFEN"
+        title="Offene Klärpunkte"
+        description="Von der KI markierte Lücken — bitte manuell mit der VO abgleichen."
+      >
+        {openQuestions.length ? (
+          <div className="overflow-x-auto rounded-lg border border-amber-200 dark:border-amber-900">
+            <table className="w-full min-w-[280px] text-sm">
+              <thead>
+                <tr className="border-b border-amber-200 bg-amber-50 text-left dark:border-amber-900 dark:bg-amber-950/50">
+                  <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:text-amber-200">
+                    Thema
+                  </th>
+                  <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:text-amber-200">
+                    Dringlichkeit
+                  </th>
+                  <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:text-amber-200">
+                    Anmerkung
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {openQuestions.map((q, i) => (
+                  <tr
+                    key={i}
+                    className="border-b border-amber-100 last:border-0 odd:bg-white even:bg-amber-50/40 dark:border-amber-900/40 dark:odd:bg-zinc-950/30 dark:even:bg-amber-950/20"
+                  >
+                    <td className="px-4 py-2.5 font-medium text-amber-950 dark:text-amber-100">
+                      {q.topic}
+                    </td>
+                    <td className="px-4 py-2.5 text-amber-900 dark:text-amber-200">
+                      {q.urgency}
+                    </td>
+                    <td className="px-4 py-2.5 text-amber-900 dark:text-amber-100">
+                      {q.reason}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <ParamTable
+            rows={[
+              {
+                param: "Manuelle Prüfung",
+                value: "Keine offenen Punkte von der KI gemeldet",
+              },
+            ]}
+          />
+        )}
+      </TypedParameterSection>
     </div>
   );
 }

@@ -83,8 +83,39 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-14">
+    <div className="min-h-screen bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/95 shadow-sm backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+              Proof of Concept
+            </p>
+            <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50 sm:text-base">
+              bAV-Parametrisierungs-Assistent
+            </p>
+          </div>
+          <nav
+            className="flex shrink-0 items-center gap-3 text-sm font-medium"
+            aria-label="Kurznavigation"
+          >
+            <a
+              href="#vo-upload"
+              className="rounded-full border border-zinc-200 px-3 py-1.5 text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Dokument
+            </a>
+            <a
+              href="/demo-vo.txt"
+              download
+              className="rounded-full bg-zinc-900 px-3 py-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              Demo-VO
+            </a>
+          </nav>
+        </div>
+      </header>
+
+      <main className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 sm:py-14">
         <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
             Proof of Concept · Version 0.1
@@ -94,9 +125,9 @@ export default function Home() {
           </h1>
           <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
             Versorgungsordnung hochladen (PDF, DOCX oder TXT). Anschließend steuern Sie
-            per <strong>Menü</strong> zwischen <strong>Kurzfassung</strong>,{" "}
-            <strong>Parametern nach Typ</strong> (mit Quellen) und dem{" "}
-            <strong>Rechner</strong>. Ohne eigene VO:{" "}
+            per <strong>Seitenmenü</strong> zwischen <strong>Kurzfassung</strong>, der{" "}
+            <strong>Parameterliste nach Typ</strong> (Tabellen + Quellen) und dem{" "}
+            <strong>eigenen Berechnungsbereich</strong>. Ohne eigene VO:{" "}
             <a
               href="/demo-vo.txt"
               download
@@ -108,7 +139,10 @@ export default function Home() {
           </p>
         </header>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <section
+          id="vo-upload"
+          className="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+        >
           <form className="flex flex-col gap-4" onSubmit={onSubmit}>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Dokument
@@ -160,9 +194,9 @@ export default function Home() {
               Noch kein Ergebnis
             </p>
             <p className="mt-2">
-              Nach erfolgreicher Extraktion erscheint hier das Menü mit{" "}
-              <strong>Kurzfassung</strong>, <strong>Parameter</strong> und{" "}
-              <strong>Rechner</strong>.
+              Nach erfolgreicher Extraktion erscheint hier die Auswertung mit{" "}
+              <strong>festem Seitenmenü</strong> (Kurzfassung, Parameterliste,
+              Berechnungsbereich).
             </p>
           </aside>
         )}
