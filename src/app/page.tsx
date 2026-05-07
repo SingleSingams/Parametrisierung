@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 
+import { CalculationWorkbench } from "@/components/calculation-workbench";
+import { ExtractionSummary } from "@/components/extraction-summary";
+import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
+
 function isAllowedDocumentFile(name: string): boolean {
   return /\.(pdf|docx|txt)$/i.test(name);
 }
@@ -9,12 +13,14 @@ function isAllowedDocumentFile(name: string): boolean {
 export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [json, setJson] = useState<string | null>(null);
+  const [extraction, setExtraction] = useState<VoBolzDirektzusageV1 | null>(null);
+  const [rawJson, setRawJson] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setJson(null);
+    setExtraction(null);
+    setRawJson(null);
     const form = e.currentTarget;
     const input = form.elements.namedItem("file") as HTMLInputElement;
     const file = input.files?.[0];
@@ -58,7 +64,18 @@ export default function Home() {
         return;
       }
 
-      setJson(JSON.stringify(data, null, 2));
+      const parsed = voBolzDirektzusageV1Schema.safeParse(data);
+      if (!parsed.success) {
+        const issues = parsed.error.issues
+          .slice(0, 15)
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("\n");
+        setError(`Struktur der Antwort unerwartet:\n${issues}`);
+        return;
+      }
+
+      setExtraction(parsed.data);
+      setRawJson(JSON.stringify(parsed.data, null, 2));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Netzwerkfehler.");
     } finally {
@@ -68,7 +85,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-14">
+      <main className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-14">
         <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
             Proof of Concept · Version 0.1
@@ -77,9 +94,10 @@ export default function Home() {
             bAV-Parametrisierungs-Assistent
           </h1>
           <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Upload einer Versorgungsordnung (PDF, DOCX oder TXT). Das Backend extrahiert
-            strukturierte Parameter für BoLZ Direktzusage inklusive Quellenangaben und
-            validiert gegen ein Zod-Schema. Ohne eigene VO:{" "}
+            Versorgungsordnung hochladen (PDF, DOCX oder TXT). Sie erhalten eine{" "}
+            <strong>verständliche Auswertung</strong> und können darunter{" "}
+            <strong>Beispielrechnungen</strong> mit den erkannten Sätzen fahren. Ohne
+            eigene VO:{" "}
             <a
               href="/demo-vo.txt"
               download
@@ -114,19 +132,15 @@ export default function Home() {
             <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
               .txt
             </code>{" "}
-            ausgegraut ist, im Dateidialog oft <strong>„Alle Dateien“</strong> wählen —
-            die App filtert PDF/DOCX/TXT beim Absenden.
+            ausgegraut ist, im Dateidialog oft <strong>„Alle Dateien“</strong> wählen.
           </p>
           <p className="mt-4 text-xs leading-relaxed text-zinc-500">
-            Beratungs-Hilfsmittel ohne versicherungsmathematische Endprüfung. Nur
-            synthetische oder anonymisierte VOs verwenden; API-Key und Modell siehe{" "}
+            Beratungs-Hilfsmittel ohne versicherungsmathematische Endprüfung. API-Key
+            und Modell siehe{" "}
             <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
               .env.example
             </code>
-            . CLI:{" "}
-            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
-              npm run extract -- dokument.pdf
-            </code>
+            .
           </p>
         </section>
 
@@ -139,14 +153,14 @@ export default function Home() {
           </div>
         ) : null}
 
-        {json ? (
-          <section className="space-y-2">
-            <h2 className="text-lg font-semibold">Ergebnis (JSON)</h2>
-            <pre className="max-h-[480px] overflow-auto rounded-lg border border-zinc-200 bg-white p-4 text-xs leading-relaxed dark:border-zinc-800 dark:bg-zinc-900">
-              {json}
-            </pre>
-          </section>
-        ) : null}
+        {extraction && rawJson ? (
+          <>
+            <ExtractionSummary data={extraction} rawJson={rawJson} />
+            <CalculationWorkbench extraction={extraction} />
+          </>
+        ) : (
+          <CalculationWorkbench extraction={null} />
+        )}
       </main>
     </div>
   );
