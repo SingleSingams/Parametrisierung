@@ -3,15 +3,6 @@ import { sourceRefSchema } from "./source-ref";
 
 const confidenceSchema = z.enum(["low", "medium", "high"]);
 
-/** Modell darf metadata unvollständig liefern; Server ergänzt extractedAt/modelVersion. */
-export const metadataSchema = z.object({
-  documentName: z.string(),
-  documentDate: z.string().nullable(),
-  extractedAt: z.string().optional(),
-  modelVersion: z.string().optional(),
-  confidence: confidenceSchema.optional(),
-});
-
 const jsonNullableNumber = z.preprocess((v) => {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -30,16 +21,34 @@ const jsonNullableBoolean = z.preprocess((v) => {
   return null;
 }, z.boolean().nullable());
 
+/** Modell liefert oft Zahlen/Booleans statt Text — für freie String-Felder. */
+const jsonNullableString = z.preprocess((v) => {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint")
+    return String(v);
+  return null;
+}, z.string().nullable());
+
+/** Modell darf metadata unvollständig liefern; Server ergänzt extractedAt/modelVersion. */
+export const metadataSchema = z.object({
+  documentName: z.string(),
+  documentDate: jsonNullableString,
+  extractedAt: z.string().optional(),
+  modelVersion: z.string().optional(),
+  confidence: confidenceSchema.optional(),
+});
+
 export const schemeSchema = z.object({
   type: z.literal("BoLZ"),
   implementation: z.literal("Direktzusage"),
   openForNewEntries: jsonNullableBoolean,
-  closingDate: z.string().nullable(),
+  closingDate: jsonNullableString,
 });
 
 export const openQuestionSchema = z.object({
-  topic: z.string(),
-  reason: z.string(),
+  topic: z.coerce.string(),
+  reason: z.coerce.string(),
   urgency: z
     .union([confidenceSchema, z.string()])
     .transform((u) => (u === "low" || u === "medium" || u === "high" ? u : "medium")),
@@ -62,16 +71,16 @@ export const eligibilitySchema = z.object({
 });
 
 export const employerContributionSchema = z.object({
-  type: z.string().nullable(),
+  type: jsonNullableString,
   rate: jsonNullableNumber,
-  base: z.string().nullable(),
-  salaryDefinition: z.string().nullable(),
-  salaryCap: z.string().nullable(),
+  base: jsonNullableString,
+  salaryDefinition: jsonNullableString,
+  salaryCap: jsonNullableString,
   source: sourceRefSchema,
 });
 
 export const employeeContributionSchema = z.object({
-  type: z.string().nullable(),
+  type: jsonNullableString,
   maxRate: jsonNullableNumber,
   source: sourceRefSchema,
 });
@@ -82,29 +91,29 @@ export const contributionsSchema = z.object({
 });
 
 export const vestingSchema = z.object({
-  rule: z.string().nullable(),
+  rule: jsonNullableString,
   minServiceYears: jsonNullableNumber,
   minAge: jsonNullableNumber,
   source: sourceRefSchema,
 });
 
 export const oldAgeBenefitSchema = z.object({
-  regularRetirementAge: z.string().nullable(),
+  regularRetirementAge: jsonNullableString,
   earlyRetirementReductionPerMonth: jsonNullableNumber,
-  formula: z.string().nullable(),
+  formula: jsonNullableString,
   guaranteedInterest: jsonNullableNumber,
   source: sourceRefSchema,
 });
 
 export const disabilityBenefitSchema = z.object({
-  qualifying: z.string().nullable(),
-  formula: z.string().nullable(),
+  qualifying: jsonNullableString,
+  formula: jsonNullableString,
   source: sourceRefSchema,
 });
 
 export const deathSpouseSchema = z.object({
   rate: jsonNullableNumber,
-  remarriage: z.string().nullable(),
+  remarriage: jsonNullableString,
   source: sourceRefSchema,
 });
 
@@ -127,8 +136,8 @@ export const benefitsSchema = z.object({
 });
 
 export const adjustmentSchema = z.object({
-  rule: z.string().nullable(),
-  method: z.string().nullable(),
+  rule: jsonNullableString,
+  method: jsonNullableString,
   source: sourceRefSchema,
 });
 
