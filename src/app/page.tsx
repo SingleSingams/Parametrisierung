@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 
-import { CalculationWorkbench } from "@/components/calculation-workbench";
-import { ExtractionSummary } from "@/components/extraction-summary";
+import { ResultsWorkspace } from "@/components/results-workspace";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 
 function isAllowedDocumentFile(name: string): boolean {
@@ -94,10 +93,10 @@ export default function Home() {
             bAV-Parametrisierungs-Assistent
           </h1>
           <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Versorgungsordnung hochladen (PDF, DOCX oder TXT). Sie erhalten eine{" "}
-            <strong>verständliche Auswertung</strong> und können darunter{" "}
-            <strong>Beispielrechnungen</strong> mit den erkannten Sätzen fahren. Ohne
-            eigene VO:{" "}
+            Versorgungsordnung hochladen (PDF, DOCX oder TXT). Anschließend steuern Sie
+            per <strong>Menü</strong> zwischen <strong>Kurzfassung</strong>,{" "}
+            <strong>Parametern nach Typ</strong> (mit Quellen) und dem{" "}
+            <strong>Rechner</strong>. Ohne eigene VO:{" "}
             <a
               href="/demo-vo.txt"
               download
@@ -154,12 +153,18 @@ export default function Home() {
         ) : null}
 
         {extraction && rawJson ? (
-          <>
-            <ExtractionSummary data={extraction} rawJson={rawJson} />
-            <CalculationWorkbench extraction={extraction} />
-          </>
+          <ResultsWorkspace data={extraction} rawJson={rawJson} />
         ) : (
-          <CalculationWorkbench extraction={null} />
+          <aside className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 px-5 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+            <p className="font-medium text-zinc-800 dark:text-zinc-200">
+              Noch kein Ergebnis
+            </p>
+            <p className="mt-2">
+              Nach erfolgreicher Extraktion erscheint hier das Menü mit{" "}
+              <strong>Kurzfassung</strong>, <strong>Parameter</strong> und{" "}
+              <strong>Rechner</strong>.
+            </p>
+          </aside>
         )}
       </main>
     </div>

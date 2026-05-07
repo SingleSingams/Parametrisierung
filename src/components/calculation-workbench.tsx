@@ -114,279 +114,291 @@ export function CalculationWorkbench({ extraction }: Props) {
   const refNum = parseFloat(refDeath.replace(",", ".")) || 0;
 
   return (
-    <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Rechner (Skelett)</h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Hier rechnen Sie mit den aus der VO übernommenen Sätzen und Ihren eigenen
-          Beispiel-Bruttolöhnen. Die Logik ist bewusst einfach (linear, ohne Biometrie)
-          — zum Verständnis und zum Abgleich, nicht für die Schlussprüfung.
-        </p>
-      </div>
-
-      <div className="space-y-3 rounded-lg border border-zinc-100 p-3 dark:border-zinc-800">
-        <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-          Sätze aus der Extraktion (anpassbar)
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            Arbeitgeber-Anteil (Dezimal, z. B. 0,04)
-            <input
-              className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              value={employerRate}
-              onChange={(e) => setEmployerRate(e.target.value)}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            Garantiezins p.a. (Dezimal)
-            <input
-              className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              value={guaranteed}
-              onChange={(e) => setGuaranteed(e.target.value)}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            Vorzeit-Kürzung pro Monat (Dezimal)
-            <input
-              className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              value={redPerMonth}
-              onChange={(e) => setRedPerMonth(e.target.value)}
-            />
-          </label>
+    <section className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
+      <div
+        className="h-1 w-full bg-gradient-to-r from-indigo-500 via-emerald-500 to-violet-500"
+        aria-hidden
+      />
+      <div className="space-y-5 p-5 sm:p-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+            Interaktiv
+          </p>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Rechner (Skelett)
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            Nutzen Sie die aus der VO übernommenen Sätze oder passen Sie sie an, und
+            spielen Sie Beispiel-Bruttolöhne durch. Die Logik ist bewusst einfach
+            (linear, ohne Biometrie) — zum Verständnis und zum Abgleich, nicht für die
+            Schlussprüfung.
+          </p>
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-          Beispiel-Bruttolöhne (EUR pro Jahr)
-        </h3>
-        {rows.map((r, i) => (
-          <div key={i} className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Jahr
-              <input
-                type="number"
-                className="w-24 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-                value={r.year}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  setRows((prev) =>
-                    prev.map((x, j) => (j === i ? { ...x, year: v } : x)),
-                  );
-                }}
-              />
-            </label>
-            <label className="flex min-w-[8rem] flex-1 flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Brutto
+        <div className="space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+          <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+            Sätze aus der Extraktion (anpassbar)
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Arbeitgeber-Anteil (Dezimal, z. B. 0,04)
               <input
                 className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-                value={r.gross}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setRows((prev) =>
-                    prev.map((x, j) => (j === i ? { ...x, gross: v } : x)),
-                  );
-                }}
+                value={employerRate}
+                onChange={(e) => setEmployerRate(e.target.value)}
               />
             </label>
-            <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              BBG-Region
-              <select
+            <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Garantiezins p.a. (Dezimal)
+              <input
                 className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-                value={r.region}
-                onChange={(e) => {
-                  const v = e.target.value as "west" | "east";
-                  setRows((prev) =>
-                    prev.map((x, j) => (j === i ? { ...x, region: v } : x)),
-                  );
-                }}
-              >
-                <option value="west">West (alte Länder)</option>
-                <option value="east">Ost (Beitritt)</option>
-              </select>
+                value={guaranteed}
+                onChange={(e) => setGuaranteed(e.target.value)}
+              />
             </label>
-            <button
-              type="button"
-              className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              onClick={() => setRows((prev) => prev.filter((_, j) => j !== i))}
-            >
-              Zeile entfernen
-            </button>
+            <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Vorzeit-Kürzung pro Monat (Dezimal)
+              <input
+                className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                value={redPerMonth}
+                onChange={(e) => setRedPerMonth(e.target.value)}
+              />
+            </label>
           </div>
-        ))}
-        <button
-          type="button"
-          className="text-sm font-medium text-zinc-700 underline dark:text-zinc-300"
-          onClick={() =>
-            setRows((prev) => [
-              ...prev,
-              {
-                year: (prev[prev.length - 1]?.year ?? 2024) + 1,
-                gross: "80000",
-                region: "west",
-              },
-            ])
-          }
-        >
-          Jahr hinzufügen
-        </button>
-      </div>
+        </div>
 
-      <div className="flex flex-wrap gap-4">
-        <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Bewertungsjahr (Aufzinsung)
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+            Beispiel-Bruttolöhne (EUR pro Jahr)
+          </h3>
+          {rows.map((r, i) => (
+            <div key={i} className="flex flex-wrap items-end gap-2">
+              <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Jahr
+                <input
+                  type="number"
+                  className="w-24 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  value={r.year}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setRows((prev) =>
+                      prev.map((x, j) => (j === i ? { ...x, year: v } : x)),
+                    );
+                  }}
+                />
+              </label>
+              <label className="flex min-w-[8rem] flex-1 flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Brutto
+                <input
+                  className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  value={r.gross}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setRows((prev) =>
+                      prev.map((x, j) => (j === i ? { ...x, gross: v } : x)),
+                    );
+                  }}
+                />
+              </label>
+              <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                BBG-Region
+                <select
+                  className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  value={r.region}
+                  onChange={(e) => {
+                    const v = e.target.value as "west" | "east";
+                    setRows((prev) =>
+                      prev.map((x, j) => (j === i ? { ...x, region: v } : x)),
+                    );
+                  }}
+                >
+                  <option value="west">West (alte Länder)</option>
+                  <option value="east">Ost (Beitritt)</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                onClick={() => setRows((prev) => prev.filter((_, j) => j !== i))}
+              >
+                Zeile entfernen
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="text-sm font-medium text-zinc-700 underline dark:text-zinc-300"
+            onClick={() =>
+              setRows((prev) => [
+                ...prev,
+                {
+                  year: (prev[prev.length - 1]?.year ?? 2024) + 1,
+                  gross: "80000",
+                  region: "west",
+                },
+              ])
+            }
+          >
+            Jahr hinzufügen
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Bewertungsjahr (Aufzinsung)
+            <input
+              type="number"
+              className="w-28 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              value={valuationYear}
+              onChange={(e) => setValuationYear(parseInt(e.target.value, 10) || 2026)}
+            />
+          </label>
+          <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Monate vor Regelalter (0 = keine Kürzung)
+            <input
+              type="number"
+              className="w-28 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              value={earlyMonths}
+              onChange={(e) => setEarlyMonths(parseInt(e.target.value, 10) || 0)}
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+            onClick={() =>
+              setOldAge(
+                calculateOldAgeBenefitSkeleton({
+                  salaryHistory,
+                  contributionParams: { employerRate: rateNum },
+                  guaranteedAnnualInterestRate: gNum,
+                  valuationYear,
+                  earlyRetirementMonthsBeforeNra: earlyMonths,
+                  earlyRetirementReductionPerMonth: redNum,
+                }),
+              )
+            }
+          >
+            Alters-Kapital berechnen
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            onClick={() =>
+              setDis(
+                calculateDisabilityBenefitSkeleton({
+                  salaryHistory,
+                  contributionParams: { employerRate: rateNum },
+                  guaranteedAnnualInterestRate: gNum,
+                  valuationYear,
+                }),
+              )
+            }
+          >
+            Invalidität (gleiche Kapitalbasis)
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            onClick={() =>
+              setDeath(
+                calculateDeathBenefitsSkeleton({
+                  referenceBenefitEur: refNum,
+                  spouseRate: defaults.spouse,
+                  orphanHalfRate: defaults.half,
+                  orphanFullRate: defaults.full,
+                }),
+              )
+            }
+          >
+            Hinterbliebene (auf Bezugsbetrag)
+          </button>
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              checked={isVested}
+              onChange={(e) => setIsVested(e.target.checked)}
+            />
+            Unverfallbar (Ausscheiden)
+          </label>
+          <button
+            type="button"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            onClick={() =>
+              setExit(
+                calculateEarlyExitWithVestingSkeleton({
+                  salaryHistory,
+                  contributionParams: { employerRate: rateNum },
+                  guaranteedAnnualInterestRate: gNum,
+                  valuationYear,
+                  isVested,
+                }),
+              )
+            }
+          >
+            Ausscheiden mit Unverfallbarkeit
+          </button>
+        </div>
+
+        <label className="flex max-w-xs flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Bezugsbetrag für Witwen-Rechner (EUR)
           <input
-            type="number"
-            className="w-28 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-            value={valuationYear}
-            onChange={(e) => setValuationYear(parseInt(e.target.value, 10) || 2026)}
+            className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            value={refDeath}
+            onChange={(e) => setRefDeath(e.target.value)}
           />
         </label>
-        <label className="flex flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Monate vor Regelalter (0 = keine Kürzung)
-          <input
-            type="number"
-            className="w-28 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-            value={earlyMonths}
-            onChange={(e) => setEarlyMonths(parseInt(e.target.value, 10) || 0)}
-          />
-        </label>
+
+        {oldAge ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <h4 className="font-semibold text-emerald-950 dark:text-emerald-100">
+              Alters-Kapital (Skelett)
+            </h4>
+            <p className="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-200">
+              {formatEur(oldAge.grossBenefitEur ?? null)}
+            </p>
+            <StepList result={oldAge} />
+          </div>
+        ) : null}
+
+        {dis ? (
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+            <h4 className="font-semibold text-sky-950 dark:text-sky-100">
+              Invalidität (Skelett)
+            </h4>
+            <p className="mt-1 text-lg font-bold text-sky-900 dark:text-sky-200">
+              {formatEur(dis.grossBenefitEur ?? null)}
+            </p>
+            <StepList result={dis} />
+          </div>
+        ) : null}
+
+        {death ? (
+          <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-900 dark:bg-violet-950/30">
+            <h4 className="font-semibold text-violet-950 dark:text-violet-100">
+              Hinterbliebene (Summe der Sätze)
+            </h4>
+            <p className="mt-1 text-lg font-bold text-violet-900 dark:text-violet-200">
+              {formatEur(death.grossBenefitEur ?? null)}
+            </p>
+            <StepList result={death} />
+          </div>
+        ) : null}
+
+        {exit ? (
+          <div className="rounded-lg border border-orange-200 bg-orange-50/60 p-4 dark:border-orange-900 dark:bg-orange-950/30">
+            <h4 className="font-semibold text-orange-950 dark:text-orange-100">
+              Vorzeitiges Ausscheiden
+            </h4>
+            <p className="mt-1 text-lg font-bold text-orange-900 dark:text-orange-200">
+              {formatEur(exit.grossBenefitEur ?? null)}
+            </p>
+            <StepList result={exit} />
+          </div>
+        ) : null}
       </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-          onClick={() =>
-            setOldAge(
-              calculateOldAgeBenefitSkeleton({
-                salaryHistory,
-                contributionParams: { employerRate: rateNum },
-                guaranteedAnnualInterestRate: gNum,
-                valuationYear,
-                earlyRetirementMonthsBeforeNra: earlyMonths,
-                earlyRetirementReductionPerMonth: redNum,
-              }),
-            )
-          }
-        >
-          Alters-Kapital berechnen
-        </button>
-        <button
-          type="button"
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-600"
-          onClick={() =>
-            setDis(
-              calculateDisabilityBenefitSkeleton({
-                salaryHistory,
-                contributionParams: { employerRate: rateNum },
-                guaranteedAnnualInterestRate: gNum,
-                valuationYear,
-              }),
-            )
-          }
-        >
-          Invalidität (gleiche Kapitalbasis)
-        </button>
-        <button
-          type="button"
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-600"
-          onClick={() =>
-            setDeath(
-              calculateDeathBenefitsSkeleton({
-                referenceBenefitEur: refNum,
-                spouseRate: defaults.spouse,
-                orphanHalfRate: defaults.half,
-                orphanFullRate: defaults.full,
-              }),
-            )
-          }
-        >
-          Hinterbliebene (auf Bezugsbetrag)
-        </button>
-        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-          <input
-            type="checkbox"
-            checked={isVested}
-            onChange={(e) => setIsVested(e.target.checked)}
-          />
-          Unverfallbar (Ausscheiden)
-        </label>
-        <button
-          type="button"
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-600"
-          onClick={() =>
-            setExit(
-              calculateEarlyExitWithVestingSkeleton({
-                salaryHistory,
-                contributionParams: { employerRate: rateNum },
-                guaranteedAnnualInterestRate: gNum,
-                valuationYear,
-                isVested,
-              }),
-            )
-          }
-        >
-          Ausscheiden mit Unverfallbarkeit
-        </button>
-      </div>
-
-      <label className="flex max-w-xs flex-col text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Bezugsbetrag für Witwen-Rechner (EUR)
-        <input
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-          value={refDeath}
-          onChange={(e) => setRefDeath(e.target.value)}
-        />
-      </label>
-
-      {oldAge ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
-          <h4 className="font-semibold text-emerald-950 dark:text-emerald-100">
-            Alters-Kapital (Skelett)
-          </h4>
-          <p className="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-200">
-            {formatEur(oldAge.grossBenefitEur ?? null)}
-          </p>
-          <StepList result={oldAge} />
-        </div>
-      ) : null}
-
-      {dis ? (
-        <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900 dark:bg-sky-950/30">
-          <h4 className="font-semibold text-sky-950 dark:text-sky-100">
-            Invalidität (Skelett)
-          </h4>
-          <p className="mt-1 text-lg font-bold text-sky-900 dark:text-sky-200">
-            {formatEur(dis.grossBenefitEur ?? null)}
-          </p>
-          <StepList result={dis} />
-        </div>
-      ) : null}
-
-      {death ? (
-        <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-900 dark:bg-violet-950/30">
-          <h4 className="font-semibold text-violet-950 dark:text-violet-100">
-            Hinterbliebene (Summe der Sätze)
-          </h4>
-          <p className="mt-1 text-lg font-bold text-violet-900 dark:text-violet-200">
-            {formatEur(death.grossBenefitEur ?? null)}
-          </p>
-          <StepList result={death} />
-        </div>
-      ) : null}
-
-      {exit ? (
-        <div className="rounded-lg border border-orange-200 bg-orange-50/60 p-4 dark:border-orange-900 dark:bg-orange-950/30">
-          <h4 className="font-semibold text-orange-950 dark:text-orange-100">
-            Vorzeitiges Ausscheiden
-          </h4>
-          <p className="mt-1 text-lg font-bold text-orange-900 dark:text-orange-200">
-            {formatEur(exit.grossBenefitEur ?? null)}
-          </p>
-          <StepList result={exit} />
-        </div>
-      ) : null}
     </section>
   );
 }
