@@ -8,4 +8,12 @@ describe("Klartext aus Dokumenten", () => {
     const buf = Buffer.from("  Hallo äöü  ", "utf8");
     expect(await extractPlainText(buf, "txt")).toBe("Hallo äöü");
   });
+
+  it("setzt pdf.js workerSrc (Datei oder CDN)", async () => {
+    const { preparePdfJsServerEnvironment } =
+      await import("@/lib/documents/pdf-node-canvas-globals");
+    await preparePdfJsServerEnvironment();
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    expect(pdfjs.GlobalWorkerOptions.workerSrc).toMatch(/^(file:|https:)/);
+  });
 });
