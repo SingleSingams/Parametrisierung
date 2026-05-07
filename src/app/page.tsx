@@ -9,6 +9,32 @@ function isAllowedDocumentFile(name: string): boolean {
   return /\.(pdf|docx|txt)$/i.test(name);
 }
 
+/** Browser bricht Verbindung oft ohne HTTP-Status ab (Vercel Timeout, OOM, Netz). */
+function describeFetchFailure(err: unknown): string {
+  if (!(err instanceof Error)) {
+    return "Netzwerkfehler.";
+  }
+  const m = err.message;
+  const looksLikeTransport =
+    m === "Failed to fetch" ||
+    m.includes("Load failed") ||
+    m.includes("NetworkError") ||
+    m.includes("network error") ||
+    m.includes("aborted");
+
+  if (looksLikeTransport) {
+    return [
+      "Die Verbindung zum Server ist abgebrochen (im Browser oft „Failed to fetch“).",
+      "",
+      "Typische Ursachen:",
+      "• Vercel Hobby: Serverless-Funktionen enden oft nach ~10 s — KI-Extraktion braucht meist länger. Lösung: Vercel-Plan mit längerem Timeout (z. B. Pro) oder lokal: npm run extract",
+      "• Sehr große PDF: Speicher/Timeout — ggf. als .txt exportieren und Text hochladen",
+      "• Mobilfunk: kurz WLAN testen oder Seite neu laden",
+    ].join("\n");
+  }
+  return m;
+}
+
 export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +62,13 @@ export default function Home() {
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch("/api/extract", { method: "POST", body });
+      const apiUrl = new URL("/api/extract", window.location.href).toString();
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        body,
+        cache: "no-store",
+        credentials: "same-origin",
+      });
       const raw = await res.text();
 
       let data: unknown;
@@ -76,7 +108,7 @@ export default function Home() {
       setExtraction(parsed.data);
       setRawJson(JSON.stringify(parsed.data, null, 2));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Netzwerkfehler.");
+      setError(describeFetchFailure(err));
     } finally {
       setBusy(false);
     }
@@ -167,6 +199,16 @@ export default function Home() {
             </code>{" "}
             ausgegraut ist, im Dateidialog oft <strong>„Alle Dateien“</strong> wählen.
           </p>
+          <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+            <strong>Vercel / Mobil:</strong> Wenn die Analyse sehr lange dauert oder
+            große PDFs nutzt, kann die Verbindung abbrechen („Failed to fetch“). Auf
+            Vercel Hobby sind Funktionen oft auf ~10 s begrenzt — für echte VOs eher{" "}
+            <strong>Pro</strong> oder Extraktion lokal mit{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
+              npm run extract
+            </code>
+            .
+          </p>
           <p className="mt-4 text-xs leading-relaxed text-zinc-500">
             Beratungs-Hilfsmittel ohne versicherungsmathematische Endprüfung. API-Key
             und Modell siehe{" "}
@@ -179,7 +221,7 @@ export default function Home() {
 
         {error ? (
           <div
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+            className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
             role="alert"
           >
             {error}
