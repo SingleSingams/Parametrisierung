@@ -20,10 +20,18 @@ describe("parseJsonFromModelText", () => {
     expect(v).toEqual({ y: 3 });
   });
 
-  it("extrahiert Objekt aus Fließtext", () => {
-    const v = parseJsonFromModelText(
-      `Einleitung\n\n{"z":4,"nested":{"a":true}}\n\nEnde`,
-    );
-    expect(v).toEqual({ z: 4, nested: { a: true } });
+  it("ignoriert langen Fließtext vor dem ersten JSON-Objekt", () => {
+    const payload = { metadata: { documentName: "x.pdf" }, k: 1 };
+    const wrapped = `Die Analyse ergab folgende Struktur (bitte prüfen):\n\n${JSON.stringify(payload)}`;
+    const v = parseJsonFromModelText(wrapped);
+    expect(v).toEqual(payload);
+  });
+
+  it("wählt das größere Objekt wenn mehrere geschweifte Klammern vorkommen", () => {
+    const small = { note: "x" };
+    const large = { metadata: { documentName: "a" }, scheme: { type: "BoLZ" } };
+    const text = `${JSON.stringify(small)} und dann ${JSON.stringify(large)}`;
+    const v = parseJsonFromModelText(text);
+    expect(v).toEqual(large);
   });
 });

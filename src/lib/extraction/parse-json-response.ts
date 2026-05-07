@@ -22,12 +22,10 @@ function extractFirstJsonFence(s: string): string | null {
 }
 
 /**
- * Größtes ausgewogenes `{ … }`-Objekt ab erstem `{` (String- und Escape-sicher).
- * Hilft, wenn vor/nach dem JSON noch Fließtext steht.
+ * Ausgewogenes `{ … }` ab fester Position (String- und Escape-sicher).
  */
-function extractBalancedJsonObject(source: string): string | null {
-  const start = source.indexOf("{");
-  if (start === -1) return null;
+function extractBalancedJsonFrom(source: string, start: number): string | null {
+  if (start < 0 || start >= source.length || source[start] !== "{") return null;
   let depth = 0;
   let inString = false;
   let escape = false;
@@ -65,10 +63,45 @@ function extractBalancedJsonObject(source: string): string | null {
   return null;
 }
 
+/** Alle vollständigen JSON-Objekte im Text (längstes zuerst) — z. B. wenn vor dem Haupt-JSON noch ein Fragment steht. */
+function listBalancedJsonObjects(source: string): string[] {
+  const found = new Set<string>();
+  const maxStarts = 80;
+  let starts = 0;
+  for (let i = 0; i < source.length && starts < maxStarts; i++) {
+    if (source[i] !== "{") continue;
+    starts++;
+    const blob = extractBalancedJsonFrom(source, i);
+    if (blob && blob.length > 30) found.add(blob);
+  }
+  return [...found].sort((a, b) => b.length - a.length);
+}
+
 function normalizeSmartQuotes(s: string): string {
   return s
     .replace(/\u201c|\u201d|\u201e|\u00ab|\u00bb/g, '"')
     .replace(/\u2018|\u2019/g, "'");
+}
+
+function tryParseJson(raw: string): unknown | null {
+  const t = normalizeSmartQuotes(raw.trim());
+  if (!t) return null;
+  try {
+    return JSON.parse(t) as unknown;
+  } catch {
+    try {
+      return JSON.parse(jsonrepair(t)) as unknown;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function pushUnique(candidates: string[], s: string | null | undefined) {
+  if (!s) return;
+  const t = s.trim();
+  if (!t) return;
+  if (!candidates.includes(t)) candidates.push(t);
 }
 
 /**
@@ -79,38 +112,44 @@ export function parseJsonFromModelText(text: string): unknown {
   let s = stripBom(text.trim());
   s = stripLeadingDashBlocks(s);
 
+  const firstBrace = s.indexOf("{");
+  if (firstBrace > 0) {
+    s = s.slice(firstBrace);
+  }
+
   const candidates: string[] = [];
 
+  pushUnique(candidates, s);
+  try {
+    const repaired = jsonrepair(s);
+    pushUnique(candidates, repaired);
+  } catch {
+    /* ignorieren */
+  }
+
   const fenced = extractFirstJsonFence(s);
+  pushUnique(candidates, fenced);
   if (fenced) {
-    candidates.push(fenced);
-    const balF = extractBalancedJsonObject(fenced);
-    if (balF) candidates.push(balF);
+    pushUnique(candidates, extractBalancedJsonFrom(fenced, 0));
   }
 
   const onlyFence = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i.exec(s);
-  if (onlyFence?.[1]) candidates.push(onlyFence[1].trim());
+  pushUnique(candidates, onlyFence?.[1]?.trim() ?? null);
 
-  const balanced = extractBalancedJsonObject(s);
-  if (balanced) candidates.push(balanced);
+  pushUnique(candidates, extractBalancedJsonFrom(s, 0));
 
-  candidates.push(s);
+  for (const blob of listBalancedJsonObjects(s)) {
+    pushUnique(candidates, blob);
+  }
 
-  const seen = new Set<string>();
-  for (let raw of candidates) {
-    raw = normalizeSmartQuotes(raw.trim());
-    if (!raw || seen.has(raw)) continue;
-    seen.add(raw);
+  const deduped = [...new Set(candidates.filter(Boolean))].sort(
+    (a, b) => b.length - a.length,
+  );
 
-    try {
-      return JSON.parse(raw) as unknown;
-    } catch {
-      /* nächster Kandidat */
-    }
-    try {
-      return JSON.parse(jsonrepair(raw)) as unknown;
-    } catch {
-      /* nächster Kandidat */
+  for (const raw of deduped) {
+    const parsed = tryParseJson(raw);
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed;
     }
   }
 
