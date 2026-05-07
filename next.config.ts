@@ -2,9 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "mammoth", "@napi-rs/canvas"],
-  /** Vercel: pdf.js-Worker-Datei sonst nicht im Lambda-Bundle */
+  /** Vercel: Worker-Dateien ins File-Tracing (zusätzlich zu /tmp-Fallback im Code) */
   outputFileTracingIncludes: {
-    "/api/**/*": [
+    "/api/extract": [
       "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
       "./node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs",
     ],

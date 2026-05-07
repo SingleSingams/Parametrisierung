@@ -3,17 +3,21 @@
  *
  * 1) **Canvas-Globals** (`DOMMatrix`, `Path2D`, `ImageData`) — sonst z. B.
  *    „DOMMatrix is not defined“ bei manchen PDFs.
- * 2) **Worker-URL** — Vercel/Next-File-Tracing packt `pdf.worker.mjs` oft nicht mit;
- *    pdf.js fällt dann auf einen „Fake Worker“ zurück und scheitert mit
- *    „Cannot find module …/pdf.worker.mjs“. Wir setzen `GlobalWorkerOptions.workerSrc`
- *    auf eine existierende `file:`-URL oder (Fallback) dieselbe Version per CDN.
+ * 2) **Worker-URL** für den pdf.js-**Fake-Worker** (Node: echte Web Workers gibt es nicht):
+ *    pdf.js macht `await import(workerSrc)`. Das darf in Node **kein** `https:`-URL sein
+ *    (Standard-ESM-Loader lehnt ab). Wenn die Worker-Datei nicht unter
+ *    `cwd/node_modules/...` liegt (Vercel-Layout), laden wir sie per **fetch** von jsDelivr
+ *    und legen sie unter **`/tmp`** ab — dann `file:`-URL.
  */
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 let canvasReady = false;
 let workerReady = false;
+/** Gecachte `file:`-URL zum Worker (lokal oder unter /tmp materialisiert). */
+let cachedWorkerHref: string | null = null;
 
 async function ensureCanvasGlobals(): Promise<void> {
   if (canvasReady) return;
@@ -27,19 +31,44 @@ async function ensureCanvasGlobals(): Promise<void> {
   canvasReady = true;
 }
 
-function resolveWorkerFileUrl(version: string): string {
-  const candidate = join(
-    process.cwd(),
-    "node_modules",
-    "pdfjs-dist",
-    "legacy",
-    "build",
-    "pdf.worker.mjs",
-  );
-  if (existsSync(candidate)) {
-    return pathToFileURL(candidate).href;
+async function resolveWorkerFileUrl(version: string): Promise<string> {
+  if (cachedWorkerHref) {
+    try {
+      const p = fileURLToPath(cachedWorkerHref);
+      if (existsSync(p)) return cachedWorkerHref;
+    } catch {
+      /* ungültige URL */
+    }
+    cachedWorkerHref = null;
   }
-  return `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/legacy/build/pdf.worker.mjs`;
+
+  const names = ["pdf.worker.min.mjs", "pdf.worker.mjs"] as const;
+  const localDir = join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build");
+
+  for (const name of names) {
+    const p = join(localDir, name);
+    if (existsSync(p)) {
+      cachedWorkerHref = pathToFileURL(p).href;
+      return cachedWorkerHref;
+    }
+  }
+
+  const cdnBase = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/legacy/build`;
+  for (const name of names) {
+    const url = `${cdnBase}/${name}`;
+    const res = await fetch(url, { redirect: "follow" });
+    if (!res.ok) continue;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const dir = mkdtempSync(join(tmpdir(), "pdfjs-worker-"));
+    const dest = join(dir, "pdf.worker.mjs");
+    writeFileSync(dest, buf);
+    cachedWorkerHref = pathToFileURL(dest).href;
+    return cachedWorkerHref;
+  }
+
+  throw new Error(
+    "pdf.js-Worker konnte weder aus node_modules noch per CDN nach /tmp geladen werden.",
+  );
 }
 
 /**
@@ -52,6 +81,6 @@ export async function preparePdfJsServerEnvironment(): Promise<void> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const { GlobalWorkerOptions, version } = pdfjs;
 
-  GlobalWorkerOptions.workerSrc = resolveWorkerFileUrl(version);
+  GlobalWorkerOptions.workerSrc = await resolveWorkerFileUrl(version);
   workerReady = true;
 }
