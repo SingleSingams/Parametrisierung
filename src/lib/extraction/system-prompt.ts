@@ -22,6 +22,8 @@ ABSOLUTE REGELN:
 4. Rechtliche Wertungen ("ist das BetrAVG-konform?") sind NICHT deine Aufgabe.
    Du extrahierst, du bewertest nicht.
 5. Antwort ausschließlich als valides JSON gemäß Schema, kein Fließtext, kein Markdown.
+6. Zahlen im JSON als Zahl (ohne Anführungszeichen), z. B. "rate": 0.04 und "page": 1 — nicht als String, außer wo das Schema Text verlangt.
+7. Jedes source-Objekt muss existieren; page als nicht-negative Ganzzahl oder null.
 
 Pflichtfelder auf oberster Ebene: metadata, scheme, eligibility, contributions, vesting, benefits, adjustment, openQuestions.
 scheme.type muss exakt "BoLZ" sein, scheme.implementation exakt "Direktzusage".`;

@@ -18,7 +18,7 @@ async function main() {
 
   if (!fileArg) {
     console.error(
-      "Usage: npm run extract -- <datei.pdf|datei.docx> [--out ergebnis.json] [--dry-run]",
+      "Usage: npm run extract -- <datei.pdf|docx|txt> [--out ergebnis.json] [--dry-run]",
     );
     process.exit(1);
   }
@@ -26,7 +26,7 @@ async function main() {
   const abs = path.resolve(fileArg);
   const kind = detectDocumentKind(abs);
   if (!kind) {
-    console.error("Nur PDF und DOCX werden unterstützt.");
+    console.error("Nur PDF, DOCX und TXT werden unterstützt.");
     process.exit(1);
   }
 

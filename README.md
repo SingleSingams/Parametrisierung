@@ -1,6 +1,6 @@
 # bAV-Parametrisierungs-Assistent (POC)
 
-Proof-of-Concept für KI-gestützte Analyse von Versorgungsordnungen (BoLZ, Direktzusage): Textextraktion aus PDF/DOCX, strukturierte Parameter-Extraktion über die Anthropic API, Validierung mit **Zod** (`BoLZ_Direktzusage_v1`).
+Proof-of-Concept für KI-gestützte Analyse von Versorgungsordnungen (BoLZ, Direktzusage): Textextraktion aus PDF/DOCX/TXT, strukturierte Parameter-Extraktion über die Anthropic API, Validierung mit **Zod** (`BoLZ_Direktzusage_v1`).
 
 ## Voraussetzungen
 
@@ -24,7 +24,10 @@ Web-UI: Upload unter `http://localhost:3000`.
 ```bash
 npm run extract -- pfad/zur/vo.pdf --out ergebnis.json
 npm run extract -- vo.docx --dry-run   # nur Klartext-Vorschau
+npm run extract -- public/demo-vo.txt --out demo.json   # Demo ohne eigene VO
 ```
+
+Auf der Web-UI: feste Demo-Datei unter **`/demo-vo.txt`** (herunterladen und wieder als `.txt` hochladen).
 
 ## Tests und Gold-Fixture
 
@@ -65,7 +68,7 @@ Deterministische Hilfsfunktionen unter `src/lib/calculation/`:
 | `scripts/extract-cli.ts`  | Kommandozeilen-Extraktion                                        |
 | `src/lib/validation/`     | Kernfeldvergleich Extraktion ↔ Gold                              |
 | `tests/fixtures/...`      | Synthetische VO + Gold-JSON                                      |
-| `vitest.config.ts`        | Testkonfiguration (Vitest)                                       |
+| `public/demo-vo.txt`      | Feste Demo-VO (TXT) zum Download und erneuten Upload             |
 
 ## Datenbank (optional)
 
@@ -78,11 +81,13 @@ npm run db:push
 
 ## Vercel (404 / leere Seite)
 
-1. **Production-Branch:** Unter *Project → Settings → Git* muss der Branch ausgewählt sein, auf dem **`package.json`** und **`next.config.ts`** liegen (meist `main`). Wenn der Next-Code nur auf einem Feature-Branch liegt und nicht gemergt ist, liefert die `.vercel.app`-URL oft **keine gültige App**.
-2. **Letztes Deployment öffnen:** *Deployments* → neuesten Eintrag wählen → **Visit** (nicht eine alte Lesezeichen-URL). Die generische Meldung **404 NOT_FOUND** mit `fra1::…` kommt häufig, wenn **kein erfolgreiches Deployment** an diese Domain gebunden ist.
-3. **Build-Logs:** Derselbe Deployment-Eintrag → *Building* / *Logs*. Rot = Build fehlgeschlagen (z. B. Node-Version, fehlende Env) — dann gibt es oft **kein** lauffähiges Output.
-4. **Umgebungsvariablen:** Für `/api/extract` mindestens **`ANTHROPIC_API_KEY`** unter *Settings → Environment Variables* (für **Production** und ggf. **Preview**) setzen und **neu deployen**.
-5. **Root Directory:** Unter *Settings → General* leer bzw. `.` — nur setzen, wenn die App in einem **Unterordner** des Repos liegt.
+1. **Production-Branch:** Unter _Project → Settings → Git_ muss der Branch ausgewählt sein, auf dem **`package.json`** und **`next.config.ts`** liegen (meist `main`). Wenn der Next-Code nur auf einem Feature-Branch liegt und nicht gemergt ist, liefert die `.vercel.app`-URL oft **keine gültige App**.
+2. **Letztes Deployment öffnen:** _Deployments_ → neuesten Eintrag wählen → **Visit** (nicht eine alte Lesezeichen-URL). Die generische Meldung **404 NOT_FOUND** mit `fra1::…` kommt häufig, wenn **kein erfolgreiches Deployment** an diese Domain gebunden ist.
+3. **Build-Logs:** Derselbe Deployment-Eintrag → _Building_ / _Logs_. Rot = Build fehlgeschlagen (z. B. Node-Version, fehlende Env) — dann gibt es oft **kein** lauffähiges Output.
+4. **Umgebungsvariablen:** Für `/api/extract` mindestens **`ANTHROPIC_API_KEY`** unter _Settings → Environment Variables_ (für **Production** und ggf. **Preview**) setzen und **neu deployen**.
+5. **GitHub Actions:** Nach Merge auf `main` unter dem Tab **Actions** den Workflow **CI** öffnen — wenn **Build** dort grün ist, ist der Code in Ordnung; dann liegt das Problem nur noch in den **Vercel-Projekteinstellungen** (nicht im Repo).
+6. **Vercel-Projekt neu anlegen:** Projekt in Vercel löschen, **Import** erneut ausführen, dabei **keine** Root Directory und **keine** Overrides setzen — oft schneller als endloses Debuggen alter Konfiguration.
+7. Repo enthält **`vercel.json`** mit `framework: nextjs` und festem `buildCommand`/`installCommand` als zusätzliche Orientierung für den Builder.
 
 Der Build-Befehl im Repo ist **`npm run build`** (`next build` ohne Turbopack) für maximale Kompatibilität mit dem Vercel-Builder.
 
@@ -90,3 +95,5 @@ Der Build-Befehl im Repo ist **`npm run build`** (`next build` ohne Turbopack) f
 
 - Keine echte Kunden-VO ohne Freigabe; POC mit synthetischen oder anonymisierten Dokumenten.
 - Modell-ID über `ANTHROPIC_MODEL` steuerbar (siehe Anthropic-Dokumentation).
+- **Vercel Hobby:** Serverless-Funktionen haben ein **kurzes Zeitlimit** (ca. 10 s). Die Extraktion ruft die KI auf und kann **deutlich länger** dauern — dann liefert Vercel eine **HTML-Fehlerseite** statt JSON. Abhilfe: **Vercel Pro** (längere `maxDuration`, im Code bis 300 s gesetzt) oder **`npm run extract`** lokal mit `.env`.
+- **TXT-Upload:** `pdf-parse` und `mammoth` werden nur bei PDF/DOCX **dynamisch** geladen, damit reine Text-Uploads auf Vercel nicht an optionalen Native-Modulen scheitern.
