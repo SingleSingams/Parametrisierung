@@ -14,9 +14,9 @@ export async function extractTextFromTxt(buffer: Buffer): Promise<string> {
 
 /** Dynamischer Import: vermeidet Lade-/Native-Probleme bei reinem TXT-Upload auf Vercel. */
 export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  const { ensurePdfJsNodeCanvasGlobals } =
+  const { preparePdfJsServerEnvironment } =
     await import("@/lib/documents/pdf-node-canvas-globals");
-  await ensurePdfJsNodeCanvasGlobals();
+  await preparePdfJsServerEnvironment();
 
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
