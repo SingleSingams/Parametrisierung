@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.0",
+    "@napi-rs/canvas": "^0.1.80",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "mammoth": "^1.12.0",
