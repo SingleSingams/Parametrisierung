@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 import { EXTRACTION_SYSTEM_PROMPT } from "./system-prompt";
+import { normalizeAnthropicBolzJson } from "./normalize-extraction-json";
 import { parseJsonFromModelText } from "./parse-json-response";
 
-const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+/** Aktuelles Standardmodell (siehe Anthropic-Modellliste); ältere IDs liefern oft 404. */
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 export type ExtractVoParamsInput = {
   documentText: string;
@@ -75,13 +77,23 @@ export async function extractVoParams(
     userContent = buildTextOnlyUserPrompt(input);
   }
 
-  const message = await client.messages.create({
-    model,
-    max_tokens: 16_384,
-    temperature: 0.15,
-    system: EXTRACTION_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userContent }],
-  });
+  let message;
+  try {
+    message = await client.messages.create({
+      model,
+      max_tokens: 16_384,
+      temperature: 0.15,
+      system: EXTRACTION_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userContent }],
+    });
+  } catch (e) {
+    if (e instanceof APIError && e.status === 404) {
+      throw new Error(
+        `Anthropic-Modell "${model}" wurde nicht gefunden (404). Lege in Vercel (oder .env) die Variable ANTHROPIC_MODEL auf ein aktuelles Modell, z. B. claude-sonnet-4-6 oder claude-haiku-4-5 — siehe https://docs.anthropic.com/en/docs/about-claude/models`,
+      );
+    }
+    throw e;
+  }
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
@@ -97,6 +109,8 @@ export async function extractVoParams(
       `JSON-Parsing fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}\n---\n${snippet}`,
     );
   }
+
+  raw = normalizeAnthropicBolzJson(raw);
 
   const parsed = voBolzDirektzusageV1Schema.safeParse(raw);
   if (!parsed.success) {
@@ -122,6 +136,7 @@ export async function extractVoParams(
       documentName: input.documentName,
       extractedAt: now,
       modelVersion: model,
+      confidence: parsed.data.metadata.confidence ?? "medium",
       sourcePlainTextLength: input.documentText.length,
       sourcePlainTextSha256,
       documentIngestMode: useNativePdf ? "anthropic_pdf" : "plain_text",

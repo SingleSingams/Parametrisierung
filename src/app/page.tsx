@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
+import { ResultsWorkspace } from "@/components/results-workspace";
 import { MIN_VO_PLAIN_TEXT_CHARS } from "@/lib/documents/vo-plain-text-guard";
+import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 
 async function readExtractApiResponse(
   res: Response,
@@ -28,7 +30,7 @@ async function readExtractApiResponse(
       : " Die Antwort ist kein gültiges JSON.";
     return {
       ok: false,
-      message: `Ungültige Server-Antwort (HTTP ${res.status}).${hint}`,
+      message: `Ungültige Server-Antwort (HTTP ${res.status}).${hint}\n\nAnfang der Antwort:\n${raw.slice(0, 500)}`,
     };
   }
 
@@ -101,29 +103,60 @@ function JsonDiagnostics({ jsonText }: { jsonText: string }) {
       </p>
       {!ok ? (
         <p className="mt-2 text-xs leading-relaxed">
-          Achtung: Länge unter dem Server-Minimum — diese Antwort sollte es eigentlich nicht
-          geben. Bitte Support melden.
+          Achtung: Hilfstext kurz — bei DOCX/TXT sollte die Extraktion länger sein. Bei Problemen
+          Dateiformat prüfen.
         </p>
       ) : (
         <p className="mt-2 text-xs leading-relaxed opacity-90">
           Unterschiedliche VOs mit echtem Textlayer liefern typischerweise andere Zeichenzahl
-          und einen anderen Hash. Wiederholt identische Werte bei unterschiedlichen Dateien
-          deuten auf identischen Textinhalt oder leere PDFs (Scan ohne OCR).
+          und einen anderen Hash.
         </p>
       )}
     </div>
   );
 }
 
+function isAllowedDocumentFile(name: string): boolean {
+  return /\.(pdf|docx|txt)$/i.test(name);
+}
+
+/** Browser bricht Verbindung oft ohne HTTP-Status ab (Vercel Timeout, OOM, Netz). */
+function describeFetchFailure(err: unknown): string {
+  if (!(err instanceof Error)) {
+    return "Netzwerkfehler.";
+  }
+  const m = err.message;
+  const looksLikeTransport =
+    m === "Failed to fetch" ||
+    m.includes("Load failed") ||
+    m.includes("NetworkError") ||
+    m.includes("network error") ||
+    m.includes("aborted");
+
+  if (looksLikeTransport) {
+    return [
+      "Die Verbindung zum Server ist abgebrochen (im Browser oft „Failed to fetch“).",
+      "",
+      "Typische Ursachen:",
+      "• Vercel Hobby: Serverless-Funktionen enden oft nach ~10 s — KI-Extraktion braucht meist länger. Lösung: Vercel-Plan mit längerem Timeout (z. B. Pro) oder lokal: npm run extract",
+      "• Sehr große PDF: Speicher/Timeout — ggf. als .txt exportieren und Text hochladen",
+      "• Mobilfunk: kurz WLAN testen oder Seite neu laden",
+    ].join("\n");
+  }
+  return m;
+}
+
 export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [json, setJson] = useState<string | null>(null);
+  const [extraction, setExtraction] = useState<VoBolzDirektzusageV1 | null>(null);
+  const [rawJson, setRawJson] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setJson(null);
+    setExtraction(null);
+    setRawJson(null);
     const form = e.currentTarget;
     const input = form.elements.namedItem("file") as HTMLInputElement;
     const file = input.files?.[0];
@@ -131,12 +164,17 @@ export default function Home() {
       setError("Bitte eine Datei wählen.");
       return;
     }
+    if (!isAllowedDocumentFile(file.name)) {
+      setError("Nur PDF-, DOCX- oder TXT-Dateien sind erlaubt.");
+      return;
+    }
 
     setBusy(true);
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch(new URL("/api/extract", window.location.href).toString(), {
+      const apiUrl = new URL("/api/extract", window.location.href).toString();
+      const res = await fetch(apiUrl, {
         method: "POST",
         body,
         cache: "no-store",
@@ -147,17 +185,60 @@ export default function Home() {
         setError(outcome.message);
         return;
       }
-      setJson(JSON.stringify(outcome.data, null, 2));
+
+      const parsed = voBolzDirektzusageV1Schema.safeParse(outcome.data);
+      if (!parsed.success) {
+        const issues = parsed.error.issues
+          .slice(0, 15)
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("\n");
+        setError(`Struktur der Antwort unerwartet:\n${issues}`);
+        return;
+      }
+
+      setExtraction(parsed.data);
+      setRawJson(JSON.stringify(parsed.data, null, 2));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Netzwerkfehler.");
+      setError(describeFetchFailure(err));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-14">
+    <div className="min-h-screen bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/95 shadow-sm backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+              Proof of Concept
+            </p>
+            <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50 sm:text-base">
+              bAV-Parametrisierungs-Assistent
+            </p>
+          </div>
+          <nav
+            className="flex shrink-0 items-center gap-3 text-sm font-medium"
+            aria-label="Kurznavigation"
+          >
+            <a
+              href="#vo-upload"
+              className="rounded-full border border-zinc-200 px-3 py-1.5 text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Dokument
+            </a>
+            <a
+              href="/demo-vo.txt"
+              download
+              className="rounded-full bg-zinc-900 px-3 py-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              Demo-VO
+            </a>
+          </nav>
+        </div>
+      </header>
+
+      <main className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 sm:py-14">
         <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
             Proof of Concept · Version 0.1
@@ -166,13 +247,26 @@ export default function Home() {
             bAV-Parametrisierungs-Assistent
           </h1>
           <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Upload einer Versorgungsordnung (PDF, DOCX oder TXT). Das Backend extrahiert
-            strukturierte Parameter für BoLZ Direktzusage inklusive Quellenangaben und
-            validiert gegen ein Zod-Schema.
+            Versorgungsordnung hochladen (PDF, DOCX oder TXT). Anschließend steuern Sie
+            per <strong>Seitenmenü</strong> zwischen <strong>Kurzfassung</strong>,{" "}
+            <strong>VO-Parametern</strong> (mit Quellen), der{" "}
+            <strong>System-Checkliste für Berechnungen</strong> und dem{" "}
+            <strong>Rechner</strong>. Ohne eigene VO:{" "}
+            <a
+              href="/demo-vo.txt"
+              download
+              className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
+            >
+              Demo-VO als Text herunterladen
+            </a>{" "}
+            und wieder hochladen.
           </p>
         </header>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <section
+          id="vo-upload"
+          className="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+        >
           <form className="flex flex-col gap-4" onSubmit={onSubmit}>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Dokument
@@ -191,37 +285,59 @@ export default function Home() {
               {busy ? "Analyse läuft…" : "Extraktion starten"}
             </button>
           </form>
+          <p className="text-xs leading-relaxed text-zinc-500">
+            Tipp (Android): Wenn{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
+              .txt
+            </code>{" "}
+            ausgegraut ist, im Dateidialog oft <strong>„Alle Dateien“</strong> wählen.
+          </p>
+          <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+            <strong>Vercel / Mobil:</strong> Wenn die Analyse sehr lange dauert oder
+            große PDFs nutzt, kann die Verbindung abbrechen („Failed to fetch“). Auf
+            Vercel Hobby sind Funktionen oft auf ~10 s begrenzt — für echte VOs eher{" "}
+            <strong>Pro</strong> oder Extraktion lokal mit{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
+              npm run extract
+            </code>
+            .
+          </p>
           <p className="mt-4 text-xs leading-relaxed text-zinc-500">
-            Beratungs-Hilfsmittel ohne versicherungsmathematische Endprüfung. Nur
-            synthetische oder anonymisierte VOs verwenden; API-Key und Modell siehe{" "}
+            Beratungs-Hilfsmittel ohne versicherungsmathematische Endprüfung. API-Key
+            und Modell siehe{" "}
             <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
               .env.example
             </code>
-            . CLI:{" "}
-            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
-              npm run extract -- dokument.pdf
-            </code>
+            .
           </p>
         </section>
 
         {error ? (
           <div
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+            className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
             role="alert"
           >
             {error}
           </div>
         ) : null}
 
-        {json ? (
-          <section className="space-y-2">
-            <h2 className="text-lg font-semibold">Ergebnis (JSON)</h2>
-            <JsonDiagnostics jsonText={json} />
-            <pre className="max-h-[480px] overflow-auto rounded-lg border border-zinc-200 bg-white p-4 text-xs leading-relaxed dark:border-zinc-800 dark:bg-zinc-900">
-              {json}
-            </pre>
-          </section>
-        ) : null}
+        {extraction && rawJson ? (
+          <div className="space-y-4">
+            <JsonDiagnostics jsonText={rawJson} />
+            <ResultsWorkspace data={extraction} rawJson={rawJson} />
+          </div>
+        ) : (
+          <aside className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 px-5 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+            <p className="font-medium text-zinc-800 dark:text-zinc-200">
+              Noch kein Ergebnis
+            </p>
+            <p className="mt-2">
+              Nach erfolgreicher Extraktion erscheint hier die Auswertung mit{" "}
+              <strong>festem Seitenmenü</strong> (Kurzfassung, VO-Parameter, System für
+              Berechnungen, Rechner).
+            </p>
+          </aside>
+        )}
       </main>
     </div>
   );

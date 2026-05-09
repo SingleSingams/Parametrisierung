@@ -5,7 +5,7 @@ import { getVoPlainTextValidationMessage } from "@/lib/documents/vo-plain-text-g
 import { extractVoParams } from "@/lib/extraction/extract-vo-params";
 
 export const runtime = "nodejs";
-/** Vercel / Hosting: längere Laufzeit für PDF + Claude (s. Plattform-Limits). */
+/** Vercel: maxDuration je nach Plan (Hobby oft ~10 s); für längere KI-/PDF-Läufe Pro oder lokales CLI. */
 export const maxDuration = 300;
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024;
@@ -56,9 +56,27 @@ export async function POST(req: Request) {
       ...(kind === "pdf" ? { pdfBytes: buffer } : {}),
     });
 
-    return NextResponse.json(result);
+    let body: string;
+    try {
+      body = JSON.stringify(result);
+    } catch (serErr) {
+      const detail = serErr instanceof Error ? serErr.message : String(serErr);
+      return NextResponse.json(
+        {
+          error: "Extraktionsergebnis ließ sich nicht als JSON serialisieren.",
+          detail,
+        },
+        { status: 500 },
+      );
+    }
+
+    return new NextResponse(body, {
+      status: 200,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Unbekannter Fehler";
+    const message =
+      e instanceof Error ? e.message : typeof e === "string" ? e : "Unbekannter Fehler";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
