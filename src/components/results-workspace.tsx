@@ -9,6 +9,7 @@ import {
   ExtractionRawJsonPanel,
   VoBriefSummary,
 } from "@/components/extraction-summary";
+import { ParametrizierungGuide } from "@/components/parametrizierung-guide";
 import type { VoBolzDirektzusageV1 } from "@/lib/schema";
 
 type ResultTab = "brief" | "params" | "system" | "calc";
@@ -23,47 +24,48 @@ const NAV: {
     id: "brief",
     label: "Kurzfassung",
     short: "Kurz",
-    desc: "Worum es in der VO geht",
+    desc: "Schnell prüfen: passt die Lesart?",
   },
   {
     id: "params",
     label: "VO-Parameter",
     short: "VO",
-    desc: "Vollständig mit Quellen",
+    desc: "Detail + Zitate zum Abgleich",
   },
   {
     id: "system",
     label: "System & Berechnung",
     short: "System",
-    desc: "Pflichtparameter für Ihre Logik",
+    desc: "Kurzcodes fürs IT-Stammblatt",
   },
   {
     id: "calc",
     label: "Berechnungsbereich",
     short: "Rechner",
-    desc: "Beispiele mit Ihren Zahlen",
+    desc: "Spielrechnung mit Ihren Zahlen",
   },
 ];
 
 const tabHeadline: Record<ResultTab, { title: string; subtitle: string }> = {
   brief: {
     title: "Kurzfassung",
-    subtitle: "Lesart der KI in wenigen Sätzen und Kennzahlen.",
+    subtitle:
+      "Erste Einordnung: Worum es im Dokument geht — bevor Sie in die Detailparameter gehen.",
   },
   params: {
     title: "VO-Parameter",
     subtitle:
-      "Auszug aus der Versorgungsordnung — typisiert, mit Quellen und Sprungmarken.",
+      "Hier vergleichen Sie jeden Wert mit Zitat und Abschnitt im Original. So erkennen Sie Fehlinterpretationen.",
   },
   system: {
     title: "System & Berechnung",
     subtitle:
-      "Flache Liste: welche Kennzahlen Sie in Ihrer Software pflegen müssen, inkl. stabiler System-Schlüssel.",
+      "Dieselben Kennzahlen in Kurzform für Konfiguration und Abstimmung mit Entwicklung — inkl. Status, ob etwas fehlt.",
   },
   calc: {
     title: "Berechnungsbereich",
     subtitle:
-      "Vom Rest der Auswertung getrennt: Beispielrechnungen mit den erkannten Sätzen und Ihren Bruttodaten.",
+      "Verknüpfung aus erkannten Sätzen und Ihren Beispiel-Bruttos: grobe Plausibilität, kein Ersatz für eine Tarifprüfung.",
   },
 };
 
@@ -185,6 +187,8 @@ export function ResultsWorkspace({ data, rawJson }: Props) {
           nicht möglich. Das PDF wurde dennoch direkt an das Modell übergeben.
         </div>
       ) : null}
+
+      <ParametrizierungGuide quoteGrounding={data.metadata.quoteGrounding} />
 
       <div className="flex flex-col md:flex-row md:min-h-[min(70vh,640px)]">
         <nav
