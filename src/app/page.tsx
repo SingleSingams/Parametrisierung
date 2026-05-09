@@ -14,7 +14,7 @@ async function readExtractApiResponse(
   if (!trimmed) {
     return {
       ok: false,
-      message: `Leere Server-Antwort (HTTP ${res.status}). Typisch bei Zeitüberschreitung (Vercel), abgebrochener Funktion oder Gateway-Fehler. Bitte erneut versuchen, ein kleineres PDF testen, oder in den Projekt-Einstellungen die Funktions-Laufzeit (maxDuration) erhöhen.`,
+      message: `Leere Server-Antwort (HTTP ${res.status}). Mögliche Ursachen: Funktion abgebrochen (Timeout/Speicher), Gateway, oder die Route hat keinen Body zurückgegeben. In den Vercel-Logs der Function nachsehen; ggf. maxDuration/Ressourcen prüfen oder erneut versuchen.`,
     };
   }
 
@@ -120,7 +120,10 @@ function isAllowedDocumentFile(name: string): boolean {
   return /\.(pdf|docx|txt)$/i.test(name);
 }
 
-/** Browser bricht Verbindung oft ohne HTTP-Status ab (Vercel Timeout, OOM, Netz). */
+/**
+ * „Failed to fetch“ ist nur die Browser-Meldung: oft kam **gar keine HTTP-Antwort** an
+ * (Abbruch auf dem Server, Proxy, Netz) — nicht automatisch „falsches Vercel-Konto“.
+ */
 function describeFetchFailure(err: unknown): string {
   if (!(err instanceof Error)) {
     return "Netzwerkfehler.";
@@ -136,11 +139,14 @@ function describeFetchFailure(err: unknown): string {
   if (looksLikeTransport) {
     return [
       "Die Verbindung zum Server ist abgebrochen (im Browser oft „Failed to fetch“).",
+      "Das ist **kein** eindeutiger Beleg für „Vercel Hobby“ — dieselbe Plattform kann bei einer anderen App anders reagieren (andere Route, kleinerer Request, weniger Speicherlast, anderes maxDuration, Streaming, o. ä.).",
       "",
-      "Typische Ursachen:",
-      "• Vercel Hobby: Serverless-Funktionen enden oft nach ~10 s — KI-Extraktion braucht meist länger. Lösung: Vercel-Plan mit längerem Timeout (z. B. Pro) oder lokal: npm run extract",
-      "• Sehr große PDF: Speicher/Timeout — ggf. als .txt exportieren und Text hochladen",
-      "• Mobilfunk: kurz WLAN testen oder Seite neu laden",
+      "Mögliche Ursachen für **diese** App:",
+      "• Die Serverless-Funktion /api/extract ist abgestürzt oder wurde vor Ende gekillt (Timeout, Speicher) — in Vercel → Projekt → Logs der Function prüfen.",
+      "• Sehr großes PDF + natives Claude-PDF: hoher Speicher- und Laufzeitbedarf.",
+      "• Mobilfunk / Tab im Hintergrund: Verbindung weg — WLAN testen oder Seite neu laden.",
+      "",
+      "Zum Vergleich ohne Browser: lokal `npm run extract -- ihre-datei.pdf` ausführen.",
     ].join("\n");
   }
   return m;
@@ -293,10 +299,10 @@ export default function Home() {
             ausgegraut ist, im Dateidialog oft <strong>„Alle Dateien“</strong> wählen.
           </p>
           <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-            <strong>Vercel / Mobil:</strong> Wenn die Analyse sehr lange dauert oder
-            große PDFs nutzt, kann die Verbindung abbrechen („Failed to fetch“). Auf
-            Vercel Hobby sind Funktionen oft auf ~10 s begrenzt — für echte VOs eher{" "}
-            <strong>Pro</strong> oder Extraktion lokal mit{" "}
+            <strong>Lange Analysen:</strong> Bei großen PDFs oder KI-Läufen kann die
+            Browser-Verbindung abbrechen („Failed to fetch“) — das hängt von dieser
+            konkreten Route (Laufzeit, Speicher, Payload) ab, nicht pauschal vom
+            Vercel-Konto. Logs in Vercel prüfen; alternativ lokal{" "}
             <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
               npm run extract
             </code>
