@@ -6,6 +6,7 @@ import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/sch
 import { EXTRACTION_SYSTEM_PROMPT } from "./system-prompt";
 import { normalizeAnthropicBolzJson } from "./normalize-extraction-json";
 import { parseJsonFromModelText } from "./parse-json-response";
+import { assessQuoteGroundingInPlainText } from "./quote-grounding";
 
 /** Aktuelles Standardmodell (siehe Anthropic-Modellliste); ältere IDs liefern oft 404. */
 const DEFAULT_MODEL = "claude-sonnet-4-6";
@@ -27,7 +28,9 @@ Nachfolgend der Klartext der Versorgungsordnung (ggf. mehrere Teile hintereinand
 ${input.documentText}
 ---
 
-Extrahiere die Parametrisierung gemäß Schema BoLZ_Direktzusage_v1 als JSON.`;
+Extrahiere die Parametrisierung gemäß Schema BoLZ_Direktzusage_v1 als JSON.
+Liegt kein klassisches BoLZ-Direktzusage-Reglement vor, setze Fachfelder überwiegend null
+und erkläre in openQuestions den erkannten Dokumenttyp — keine Standard-bAV-Musterwerte.`;
 }
 
 function buildPdfUserPrompt(input: ExtractVoParamsInput): string {
@@ -41,7 +44,11 @@ function buildPdfUserPrompt(input: ExtractVoParamsInput): string {
 Die Versorgungsordnung liegt als **vollständiges PDF** im ersten Inhaltsblock (document) vor.
 ${appendix}
 Extrahiere die Parametrisierung gemäß Schema BoLZ_Direktzusage_v1 als JSON.
-Nutze für source.page wo möglich die **PDF-Seitennummer** (wie im Viewer angezeigt).`;
+Nutze für source.page wo möglich die **PDF-Seitennummer** (wie im Viewer angezeigt).
+
+Wichtig: Wenn das PDF **kein** klassisches BoLZ-Direktzusage-Reglement ist (z. B. Kapitalplan,
+Deckungskonzept, Marketing), dann **keine** typischen bAV-Standardwerte einsetzen — Felder
+null lassen und in openQuestions den Dokumenttyp benennen. Jede Zahl nur mit Beleg im PDF.`;
 }
 
 export async function extractVoParams(
@@ -82,7 +89,7 @@ export async function extractVoParams(
     message = await client.messages.create({
       model,
       max_tokens: 16_384,
-      temperature: 0.15,
+      temperature: 0,
       system: EXTRACTION_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     });
@@ -129,6 +136,8 @@ export async function extractVoParams(
     ? createHash("sha256").update(input.pdfBytes!).digest("hex")
     : undefined;
 
+  const grounding = assessQuoteGroundingInPlainText(parsed.data, input.documentText);
+
   return {
     ...parsed.data,
     metadata: {
@@ -140,6 +149,7 @@ export async function extractVoParams(
       sourcePlainTextLength: input.documentText.length,
       sourcePlainTextSha256,
       documentIngestMode: useNativePdf ? "anthropic_pdf" : "plain_text",
+      quoteGrounding: grounding.level,
       ...(sourcePdfSha256 ? { sourcePdfSha256 } : {}),
     },
   };

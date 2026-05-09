@@ -45,6 +45,8 @@ export const metadataSchema = z.object({
   documentIngestMode: z.enum(["plain_text", "anthropic_pdf"]).optional(),
   /** Vom Server: SHA-256 (hex) der PDF-Rohdatei bei anthropic_pdf. */
   sourcePdfSha256: z.string().length(64).optional(),
+  /** Vom Server: liegen Zitate im mitgelieferten Klartext (pdf-parse) wieder? */
+  quoteGrounding: z.enum(["ok", "weak", "skipped"]).optional(),
 });
 
 export const schemeSchema = z.object({

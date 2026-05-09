@@ -40,6 +40,11 @@ ABSOLUTE REGELN:
 11. metadata.documentName muss exakt dem übergebenen Dateinamen entsprechen.
 12. Wenn die Quelle offenbar zu leer ist, um die VO sinnvoll zu erfassen: keine
    typischen Standard-bAV-Werte erraten; null setzen und openQuestions mit Hinweis.
+13. Verboten ist das „Auffüllen“ mit gängigen bAV-Mustern (z. B. 4 % AG-Zuschlag,
+   1,25 % Garantiezins, 0,3 % Vorzeit-Kürzung/Monat, 60 % Witwenquote, § 1b BetrAVG-Floskeln),
+   wenn die **konkrete Zahl oder Formulierung** im Dokument nicht vorkommt. Liegt statt
+   einer VO z. B. ein Kapitalplan oder Deckungsnachweis vor, setze die Fachfelder überwiegend
+   null und erkläre in openQuestions, welcher Dokumenttyp erkannt wurde.
 
 Pflichtfelder auf oberster Ebene: metadata, scheme, eligibility, contributions, vesting, benefits, adjustment, openQuestions.
 scheme.type muss exakt "BoLZ" sein, scheme.implementation exakt "Direktzusage".`;

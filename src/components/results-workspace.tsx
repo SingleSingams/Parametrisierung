@@ -169,6 +169,23 @@ export function ResultsWorkspace({ data, rawJson }: Props) {
         </p>
       </div>
 
+      {data.metadata.quoteGrounding === "weak" ? (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-50 md:px-6">
+          <p className="font-semibold">Hinweis: Inhalt wirkt nicht aus Ihrem Dokument belegt</p>
+          <p className="mt-1 text-xs leading-relaxed opacity-95">
+            Die gelieferten <strong>source.quote</strong>-Texte finden sich in der automatisch aus
+            dem PDF erzeugten Textkopie nicht wieder (oder es fehlen lange Zitate). Typische Ursachen:
+            Modell-Füllwerte, ein anderer Dokumenttyp als klassische BoLZ-VO (z. B. Kapitalplan), oder
+            starkes Layout ohne brauchbaren Textlayer. Bitte das Ergebnis fachlich prüfen.
+          </p>
+        </div>
+      ) : data.metadata.quoteGrounding === "skipped" ? (
+        <div className="border-b border-zinc-200 bg-zinc-100/90 px-4 py-2.5 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 md:px-6">
+          Aus dem PDF ließ sich wenig Klartext extrahieren — eine automatische Zitatprüfung war
+          nicht möglich. Das PDF wurde dennoch direkt an das Modell übergeben.
+        </div>
+      ) : null}
+
       <div className="flex flex-col md:flex-row md:min-h-[min(70vh,640px)]">
         <nav
           className="sticky top-0 z-20 border-b border-zinc-200 bg-zinc-100 md:static md:z-auto md:w-56 md:shrink-0 md:border-b-0 md:border-r md:border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900/60 lg:w-60"
