@@ -37,6 +37,14 @@ export const metadataSchema = z.object({
   extractedAt: z.string().optional(),
   modelVersion: z.string().optional(),
   confidence: confidenceSchema.optional(),
+  /** Vom Server: Länge des Hilfs-Klartexts (pdf-parse o. ä.). */
+  sourcePlainTextLength: z.number().int().nonnegative().optional(),
+  /** Vom Server: SHA-256 (hex) des Hilfs-Klartexts. */
+  sourcePlainTextSha256: z.string().length(64).optional(),
+  /** Vom Server: plain_text vs. natives PDF an Claude. */
+  documentIngestMode: z.enum(["plain_text", "anthropic_pdf"]).optional(),
+  /** Vom Server: SHA-256 (hex) der PDF-Rohdatei bei anthropic_pdf. */
+  sourcePdfSha256: z.string().length(64).optional(),
 });
 
 export const schemeSchema = z.object({

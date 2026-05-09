@@ -3,7 +3,118 @@
 import { useState } from "react";
 
 import { ResultsWorkspace } from "@/components/results-workspace";
+import { MIN_VO_PLAIN_TEXT_CHARS } from "@/lib/documents/vo-plain-text-guard";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
+
+async function readExtractApiResponse(
+  res: Response,
+): Promise<{ ok: true; data: unknown } | { ok: false; message: string }> {
+  const raw = await res.text();
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return {
+      ok: false,
+      message: `Leere Server-Antwort (HTTP ${res.status}). Typisch bei Zeitüberschreitung (Vercel), abgebrochener Funktion oder Gateway-Fehler. Bitte erneut versuchen, ein kleineres PDF testen, oder in den Projekt-Einstellungen die Funktions-Laufzeit (maxDuration) erhöhen.`,
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    const looksHtml =
+      trimmed.startsWith("<!") ||
+      trimmed.slice(0, 200).toLowerCase().includes("<html");
+    const hint = looksHtml
+      ? " Die Antwort ist HTML (z. B. Fehler- oder Timeout-Seite), kein JSON."
+      : " Die Antwort ist kein gültiges JSON.";
+    return {
+      ok: false,
+      message: `Ungültige Server-Antwort (HTTP ${res.status}).${hint}\n\nAnfang der Antwort:\n${raw.slice(0, 500)}`,
+    };
+  }
+
+  if (!res.ok) {
+    const msg =
+      parsed &&
+      typeof parsed === "object" &&
+      "error" in parsed &&
+      typeof (parsed as { error: unknown }).error === "string"
+        ? (parsed as { error: string }).error
+        : `Anfrage fehlgeschlagen (HTTP ${res.status}).`;
+    return { ok: false, message: msg };
+  }
+
+  return { ok: true, data: parsed };
+}
+
+function JsonDiagnostics({ jsonText }: { jsonText: string }) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText) as unknown;
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const meta = (parsed as { metadata?: Record<string, unknown> }).metadata;
+  if (!meta) return null;
+  const len = meta.sourcePlainTextLength;
+  const sha = meta.sourcePlainTextSha256;
+  const mode = meta.documentIngestMode;
+  const pdfSha = meta.sourcePdfSha256;
+  if (typeof len !== "number" || typeof sha !== "string") return null;
+
+  if (mode === "anthropic_pdf") {
+    return (
+      <div
+        className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
+        role="status"
+      >
+        <p className="font-medium">Dokument: natives PDF an Claude</p>
+        <p className="mt-1 text-xs leading-relaxed opacity-95">
+          Entspricht dem Vorgehen in Claude Code: das PDF wird direkt verarbeitet, nicht nur
+          eine oft unvollständige Textextraktion.
+        </p>
+        {typeof pdfSha === "string" ? (
+          <p className="mt-2 font-mono text-[11px]">
+            PDF-Datei SHA-256: {pdfSha.slice(0, 18)}…
+          </p>
+        ) : null}
+        <p className="mt-2 font-mono text-[11px] text-sky-900/80 dark:text-sky-200/90">
+          Zusatz: pdf-parse-Klartext {len} Zeichen · SHA {sha.slice(0, 12)}… (nur Diagnose)
+        </p>
+      </div>
+    );
+  }
+
+  const ok = len >= MIN_VO_PLAIN_TEXT_CHARS;
+  return (
+    <div
+      className={`rounded-lg border px-4 py-3 text-sm ${
+        ok
+          ? "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+          : "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+      }`}
+      role="status"
+    >
+      <p className="font-medium">Transparenz: eingelesener Klartext</p>
+      <p className="mt-1 font-mono text-xs">
+        {len} Zeichen · SHA-256 {sha.slice(0, 12)}…
+      </p>
+      {!ok ? (
+        <p className="mt-2 text-xs leading-relaxed">
+          Achtung: Hilfstext kurz — bei DOCX/TXT sollte die Extraktion länger sein. Bei Problemen
+          Dateiformat prüfen.
+        </p>
+      ) : (
+        <p className="mt-2 text-xs leading-relaxed opacity-90">
+          Unterschiedliche VOs mit echtem Textlayer liefern typischerweise andere Zeichenzahl
+          und einen anderen Hash.
+        </p>
+      )}
+    </div>
+  );
+}
 
 function isAllowedDocumentFile(name: string): boolean {
   return /\.(pdf|docx|txt)$/i.test(name);
@@ -69,33 +180,13 @@ export default function Home() {
         cache: "no-store",
         credentials: "same-origin",
       });
-      const raw = await res.text();
-
-      let data: unknown;
-      try {
-        data = JSON.parse(raw) as unknown;
-      } catch {
-        const hint =
-          raw.trimStart().startsWith("<!") || raw.trimStart().startsWith("<html")
-            ? " Der Server hat HTML statt JSON geliefert — typisch bei Vercel-Zeitlimit (Hobby oft ~10 s, KI braucht länger), einer Fehlerseite oder einem falschen Pfad."
-            : "";
-        setError(
-          `Antwort war kein JSON (HTTP ${res.status}).${hint}\n\nAnfang der Antwort:\n${raw.slice(0, 500)}`,
-        );
+      const outcome = await readExtractApiResponse(res);
+      if (!outcome.ok) {
+        setError(outcome.message);
         return;
       }
 
-      if (!res.ok) {
-        const errObj = data as { error?: string };
-        setError(
-          typeof errObj.error === "string"
-            ? errObj.error
-            : `Anfrage fehlgeschlagen (HTTP ${res.status}).`,
-        );
-        return;
-      }
-
-      const parsed = voBolzDirektzusageV1Schema.safeParse(data);
+      const parsed = voBolzDirektzusageV1Schema.safeParse(outcome.data);
       if (!parsed.success) {
         const issues = parsed.error.issues
           .slice(0, 15)
@@ -182,6 +273,7 @@ export default function Home() {
               <input
                 name="file"
                 type="file"
+                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 className="text-sm font-normal file:mr-4 file:rounded-md file:border-0 file:bg-zinc-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800 dark:file:bg-zinc-100 dark:file:text-zinc-900"
               />
             </label>
@@ -230,7 +322,10 @@ export default function Home() {
         ) : null}
 
         {extraction && rawJson ? (
-          <ResultsWorkspace data={extraction} rawJson={rawJson} />
+          <div className="space-y-4">
+            <JsonDiagnostics jsonText={rawJson} />
+            <ResultsWorkspace data={extraction} rawJson={rawJson} />
+          </div>
         ) : (
           <aside className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 px-5 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
             <p className="font-medium text-zinc-800 dark:text-zinc-200">

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { detectDocumentKind, extractPlainText } from "@/lib/documents/extract-text";
+import { getVoPlainTextValidationMessage } from "@/lib/documents/vo-plain-text-guard";
 import { extractVoParams } from "@/lib/extraction/extract-vo-params";
 
 export const runtime = "nodejs";
-/** Vercel: je nach Plan gedeckelt (Hobby oft ~10 s). Für längere KI-Läufe Pro oder lokales CLI. */
+/** Vercel: maxDuration je nach Plan (Hobby oft ~10 s); für längere KI-/PDF-Läufe Pro oder lokales CLI. */
 export const maxDuration = 300;
+
+const MAX_PDF_BYTES = 32 * 1024 * 1024;
 
 export async function POST(req: Request) {
   try {
@@ -28,11 +31,29 @@ export async function POST(req: Request) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const text = await extractPlainText(buffer, kind);
+
+    if (kind === "pdf" && buffer.length > MAX_PDF_BYTES) {
+      return NextResponse.json(
+        {
+          error: `PDF zu groß (${buffer.length} Bytes, Maximum ${MAX_PDF_BYTES} Bytes laut Anthropic-Richtlinie).`,
+        },
+        { status: 413 },
+      );
+    }
+
+    const text = (await extractPlainText(buffer, kind)).trim();
+
+    if (kind !== "pdf") {
+      const tooShort = getVoPlainTextValidationMessage(text);
+      if (tooShort) {
+        return NextResponse.json({ error: tooShort }, { status: 422 });
+      }
+    }
 
     const result = await extractVoParams({
       documentText: text,
       documentName: file.name,
+      ...(kind === "pdf" ? { pdfBytes: buffer } : {}),
     });
 
     let body: string;
