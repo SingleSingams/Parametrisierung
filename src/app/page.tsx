@@ -4,6 +4,48 @@ import { useState } from "react";
 
 import { MIN_VO_PLAIN_TEXT_CHARS } from "@/lib/documents/vo-plain-text-guard";
 
+async function readExtractApiResponse(
+  res: Response,
+): Promise<{ ok: true; data: unknown } | { ok: false; message: string }> {
+  const raw = await res.text();
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return {
+      ok: false,
+      message: `Leere Server-Antwort (HTTP ${res.status}). Typisch bei Zeitüberschreitung (Vercel), abgebrochener Funktion oder Gateway-Fehler. Bitte erneut versuchen, ein kleineres PDF testen, oder in den Projekt-Einstellungen die Funktions-Laufzeit (maxDuration) erhöhen.`,
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    const looksHtml =
+      trimmed.startsWith("<!") ||
+      trimmed.slice(0, 200).toLowerCase().includes("<html");
+    const hint = looksHtml
+      ? " Die Antwort ist HTML (z. B. Fehler- oder Timeout-Seite), kein JSON."
+      : " Die Antwort ist kein gültiges JSON.";
+    return {
+      ok: false,
+      message: `Ungültige Server-Antwort (HTTP ${res.status}).${hint}`,
+    };
+  }
+
+  if (!res.ok) {
+    const msg =
+      parsed &&
+      typeof parsed === "object" &&
+      "error" in parsed &&
+      typeof (parsed as { error: unknown }).error === "string"
+        ? (parsed as { error: string }).error
+        : `Anfrage fehlgeschlagen (HTTP ${res.status}).`;
+    return { ok: false, message: msg };
+  }
+
+  return { ok: true, data: parsed };
+}
+
 function JsonDiagnostics({ jsonText }: { jsonText: string }) {
   let parsed: unknown;
   try {
@@ -94,15 +136,18 @@ export default function Home() {
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch("/api/extract", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(
-          typeof data.error === "string" ? data.error : "Anfrage fehlgeschlagen.",
-        );
+      const res = await fetch(new URL("/api/extract", window.location.href).toString(), {
+        method: "POST",
+        body,
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const outcome = await readExtractApiResponse(res);
+      if (!outcome.ok) {
+        setError(outcome.message);
         return;
       }
-      setJson(JSON.stringify(data, null, 2));
+      setJson(JSON.stringify(outcome.data, null, 2));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Netzwerkfehler.");
     } finally {

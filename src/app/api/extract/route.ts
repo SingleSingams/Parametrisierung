@@ -5,6 +5,8 @@ import { getVoPlainTextValidationMessage } from "@/lib/documents/vo-plain-text-g
 import { extractVoParams } from "@/lib/extraction/extract-vo-params";
 
 export const runtime = "nodejs";
+/** Vercel / Hosting: längere Laufzeit für PDF + Claude (s. Plattform-Limits). */
+export const maxDuration = 300;
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024;
 
