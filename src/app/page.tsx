@@ -2,6 +2,51 @@
 
 import { useState } from "react";
 
+import { MIN_VO_PLAIN_TEXT_CHARS } from "@/lib/documents/vo-plain-text-guard";
+
+function JsonDiagnostics({ jsonText }: { jsonText: string }) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText) as unknown;
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const meta = (parsed as { metadata?: Record<string, unknown> }).metadata;
+  if (!meta) return null;
+  const len = meta.sourcePlainTextLength;
+  const sha = meta.sourcePlainTextSha256;
+  if (typeof len !== "number" || typeof sha !== "string") return null;
+  const ok = len >= MIN_VO_PLAIN_TEXT_CHARS;
+  return (
+    <div
+      className={`rounded-lg border px-4 py-3 text-sm ${
+        ok
+          ? "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+          : "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+      }`}
+      role="status"
+    >
+      <p className="font-medium">Transparenz: eingelesener Klartext</p>
+      <p className="mt-1 font-mono text-xs">
+        {len} Zeichen · SHA-256 {sha.slice(0, 12)}…
+      </p>
+      {!ok ? (
+        <p className="mt-2 text-xs leading-relaxed">
+          Achtung: Länge unter dem Server-Minimum — diese Antwort sollte es eigentlich nicht
+          geben. Bitte Support melden.
+        </p>
+      ) : (
+        <p className="mt-2 text-xs leading-relaxed opacity-90">
+          Unterschiedliche VOs mit echtem Textlayer liefern typischerweise andere Zeichenzahl
+          und einen anderen Hash. Wiederholt identische Werte bei unterschiedlichen Dateien
+          deuten auf identischen Textinhalt oder leere PDFs (Scan ohne OCR).
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +95,7 @@ export default function Home() {
             bAV-Parametrisierungs-Assistent
           </h1>
           <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Upload einer Versorgungsordnung (PDF oder DOCX). Das Backend extrahiert
+            Upload einer Versorgungsordnung (PDF, DOCX oder TXT). Das Backend extrahiert
             strukturierte Parameter für BoLZ Direktzusage inklusive Quellenangaben und
             validiert gegen ein Zod-Schema.
           </p>
@@ -63,7 +108,7 @@ export default function Home() {
               <input
                 name="file"
                 type="file"
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 className="text-sm font-normal file:mr-4 file:rounded-md file:border-0 file:bg-zinc-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800 dark:file:bg-zinc-100 dark:file:text-zinc-900"
               />
             </label>
@@ -100,6 +145,7 @@ export default function Home() {
         {json ? (
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">Ergebnis (JSON)</h2>
+            <JsonDiagnostics jsonText={json} />
             <pre className="max-h-[480px] overflow-auto rounded-lg border border-zinc-200 bg-white p-4 text-xs leading-relaxed dark:border-zinc-800 dark:bg-zinc-900">
               {json}
             </pre>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { detectDocumentKind, extractPlainText } from "@/lib/documents/extract-text";
+import { getVoPlainTextValidationMessage } from "@/lib/documents/vo-plain-text-guard";
 import { extractVoParams } from "@/lib/extraction/extract-vo-params";
 
 export const runtime = "nodejs";
@@ -19,14 +20,18 @@ export async function POST(req: Request) {
     const kind = detectDocumentKind(file.name);
     if (!kind) {
       return NextResponse.json(
-        { error: "Nur PDF und DOCX werden unterstützt." },
+        { error: "Nur PDF, DOCX und TXT werden unterstützt." },
         { status: 400 },
       );
     }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const text = await extractPlainText(buffer, kind);
+    const text = (await extractPlainText(buffer, kind)).trim();
+    const tooShort = getVoPlainTextValidationMessage(text);
+    if (tooShort) {
+      return NextResponse.json({ error: tooShort }, { status: 422 });
+    }
 
     const result = await extractVoParams({
       documentText: text,

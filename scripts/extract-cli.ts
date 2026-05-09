@@ -6,6 +6,7 @@ import {
   detectDocumentKind,
   extractPlainText,
 } from "../src/lib/documents/extract-text";
+import { getVoPlainTextValidationMessage } from "../src/lib/documents/vo-plain-text-guard";
 import { extractVoParams } from "../src/lib/extraction/extract-vo-params";
 
 async function main() {
@@ -18,7 +19,7 @@ async function main() {
 
   if (!fileArg) {
     console.error(
-      "Usage: npm run extract -- <datei.pdf|datei.docx> [--out ergebnis.json] [--dry-run]",
+      "Usage: npm run extract -- <datei.pdf|datei.docx|datei.txt> [--out ergebnis.json] [--dry-run]",
     );
     process.exit(1);
   }
@@ -26,12 +27,12 @@ async function main() {
   const abs = path.resolve(fileArg);
   const kind = detectDocumentKind(abs);
   if (!kind) {
-    console.error("Nur PDF und DOCX werden unterstützt.");
+    console.error("Nur PDF, DOCX und TXT werden unterstützt.");
     process.exit(1);
   }
 
   const buffer = readFileSync(abs);
-  const text = await extractPlainText(buffer, kind);
+  const text = (await extractPlainText(buffer, kind)).trim();
   if (!text.length) {
     console.warn(
       "Warnung: Kein Text extrahiert (leeres PDF, Scan ohne OCR, oder Parsing-Problem).",
@@ -42,6 +43,12 @@ async function main() {
     console.log("--- Extrahierter Klartext (Anfang) ---\n");
     console.log(text.slice(0, 12_000));
     process.exit(0);
+  }
+
+  const shortMsg = getVoPlainTextValidationMessage(text);
+  if (shortMsg) {
+    console.error(shortMsg);
+    process.exit(1);
   }
 
   const documentName = path.basename(abs);

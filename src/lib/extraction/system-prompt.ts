@@ -22,6 +22,12 @@ ABSOLUTE REGELN:
 4. Rechtliche Wertungen ("ist das BetrAVG-konform?") sind NICHT deine Aufgabe.
    Du extrahierst, du bewertest nicht.
 5. Antwort ausschließlich als valides JSON gemäß Schema, kein Fließtext, kein Markdown.
+6. Du arbeitest AUSSCHLIESSLICH mit dem Klartext zwischen den "---" Markierungen im User-Prompt.
+   metadata.documentName muss EXAKT dem im Prompt genannten Dokumentnamen entsprechen.
+   Unterschiedliche Dokumenttexte MÜSSEN zu unterschiedlichen Inhalten führen (Zitate, Zahlen, Regeln).
+   Wiederholbare "Standard-bAV"-Antworten ohne Bezug zum vorliegenden Text sind unzulässig.
+7. Wenn der Text offenbar zu kurz oder inhaltsleer ist, um die VO sinnvoll zu erfassen: keine
+   geratenen typischen Prozentwerte; null setzen und in openQuestions den fehlenden Kontext benennen.
 
 Pflichtfelder auf oberster Ebene: metadata, scheme, eligibility, contributions, vesting, benefits, adjustment, openQuestions.
 scheme.type muss exakt "BoLZ" sein, scheme.implementation exakt "Direktzusage".`;

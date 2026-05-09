@@ -1,12 +1,13 @@
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 
-export type DocumentKind = "pdf" | "docx";
+export type DocumentKind = "pdf" | "docx" | "txt";
 
 export function detectDocumentKind(filename: string): DocumentKind | null {
   const lower = filename.toLowerCase();
   if (lower.endsWith(".pdf")) return "pdf";
   if (lower.endsWith(".docx")) return "docx";
+  if (lower.endsWith(".txt")) return "txt";
   return null;
 }
 
@@ -30,5 +31,6 @@ export async function extractPlainText(
   kind: DocumentKind,
 ): Promise<string> {
   if (kind === "pdf") return extractTextFromPdf(buffer);
-  return extractTextFromDocx(buffer);
+  if (kind === "docx") return extractTextFromDocx(buffer);
+  return buffer.toString("utf8").trim();
 }

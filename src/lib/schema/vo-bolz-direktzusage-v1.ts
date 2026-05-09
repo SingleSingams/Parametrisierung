@@ -9,6 +9,10 @@ export const metadataSchema = z.object({
   extractedAt: z.string(),
   modelVersion: z.string(),
   confidence: confidenceSchema,
+  /** Vom Server gesetzt: Länge des an das Modell übergebenen Klartexts (Transparenz / Debugging). */
+  sourcePlainTextLength: z.number().int().nonnegative().optional(),
+  /** SHA-256 (hex) des Klartexts — gleicher Hash bei verschiedenen Dateinamen = gleicher Textinhalt. */
+  sourcePlainTextSha256: z.string().length(64).optional(),
 });
 
 export const schemeSchema = z.object({

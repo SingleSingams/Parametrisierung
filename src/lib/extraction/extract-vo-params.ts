@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import Anthropic from "@anthropic-ai/sdk";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 import { EXTRACTION_SYSTEM_PROMPT } from "./system-prompt";
@@ -39,6 +41,7 @@ export async function extractVoParams(
   const message = await client.messages.create({
     model,
     max_tokens: 16_384,
+    temperature: 0.15,
     system: EXTRACTION_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildUserPrompt(input) }],
   });
@@ -68,6 +71,9 @@ export async function extractVoParams(
   }
 
   const now = new Date().toISOString();
+  const sourcePlainTextSha256 = createHash("sha256")
+    .update(input.documentText, "utf8")
+    .digest("hex");
   return {
     ...parsed.data,
     metadata: {
@@ -75,6 +81,8 @@ export async function extractVoParams(
       documentName: input.documentName,
       extractedAt: now,
       modelVersion: model,
+      sourcePlainTextLength: input.documentText.length,
+      sourcePlainTextSha256,
     },
   };
 }
