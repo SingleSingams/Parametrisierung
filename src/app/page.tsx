@@ -80,6 +80,16 @@ function JsonDiagnostics({ jsonText }: { jsonText: string }) {
             PDF-Datei SHA-256: {pdfSha.slice(0, 18)}…
           </p>
         ) : null}
+        {typeof meta.pdfTransport === "string" && meta.pdfTransport !== "none" ? (
+          <p className="mt-1 text-[11px] text-sky-800/90 dark:text-sky-200/90">
+            Transport zum Modell:{" "}
+            <strong>
+              {meta.pdfTransport === "files_api"
+                ? "Files-API (für größere PDFs, weniger Abbruchrisiko)"
+                : "Base64 im Request"}
+            </strong>
+          </p>
+        ) : null}
         <p className="mt-2 font-mono text-[11px] text-sky-900/80 dark:text-sky-200/90">
           Zusatz: pdf-parse-Klartext {len} Zeichen · SHA {sha.slice(0, 12)}… (nur Diagnose)
         </p>
@@ -120,6 +130,9 @@ function isAllowedDocumentFile(name: string): boolean {
   return /\.(pdf|docx|txt)$/i.test(name);
 }
 
+/** Viele Hosting-Umgebungen kappen große multipart-Uploads (Browser zeigt dann „Failed to fetch“). */
+const MAX_CLIENT_UPLOAD_BYTES = Math.floor(4.5 * 1024 * 1024);
+
 /**
  * „Failed to fetch“ ist nur die Browser-Meldung: oft kam **gar keine HTTP-Antwort** an
  * (Abbruch auf dem Server, Proxy, Netz) — nicht automatisch „falsches Vercel-Konto“.
@@ -144,6 +157,7 @@ function describeFetchFailure(err: unknown): string {
       "Mögliche Ursachen für **diese** App:",
       "• Die Serverless-Funktion /api/extract ist abgestürzt oder wurde vor Ende gekillt (Timeout, Speicher) — in Vercel → Projekt → Logs der Function prüfen.",
       "• Sehr großes PDF + natives Claude-PDF: hoher Speicher- und Laufzeitbedarf.",
+      "• Sehr große Datei im Upload: manche Plattformen brechen multipart-Anfragen ab — Dateigröße prüfen (unter 4–5 MB ist oft sicherer).",
       "• Mobilfunk / Tab im Hintergrund: Verbindung weg — WLAN testen oder Seite neu laden.",
       "",
       "Zum Vergleich ohne Browser: lokal `npm run extract -- ihre-datei.pdf` ausführen.",
@@ -172,6 +186,12 @@ export default function Home() {
     }
     if (!isAllowedDocumentFile(file.name)) {
       setError("Nur PDF-, DOCX- oder TXT-Dateien sind erlaubt.");
+      return;
+    }
+    if (file.size > MAX_CLIENT_UPLOAD_BYTES) {
+      setError(
+        `Die Datei ist mit ${(file.size / (1024 * 1024)).toFixed(1)} MB zu groß für einen stabilen Browser-Upload zu dieser API (üblich sind Grenzen um ca. 4–5 MB pro Anfrage). Bitte PDF komprimieren, in mehrere Teile splitten oder den Text als .txt exportieren und hochladen.`,
+      );
       return;
     }
 

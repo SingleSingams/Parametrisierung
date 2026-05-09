@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import Anthropic, { APIError } from "@anthropic-ai/sdk";
+import Anthropic, { APIError, toFile } from "@anthropic-ai/sdk";
 import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 import { EXTRACTION_SYSTEM_PROMPT } from "./system-prompt";
@@ -10,6 +10,14 @@ import { assessQuoteGroundingInPlainText } from "./quote-grounding";
 
 /** Aktuelles Standardmodell (siehe Anthropic-Modellliste); ältere IDs liefern oft 404. */
 const DEFAULT_MODEL = "claude-sonnet-4-6";
+
+const FILES_BETA = "files-api-2025-04-14" as const;
+
+/**
+ * Ab dieser Roh-PDF-Größe wird Base64 in einer Messages-JSON-Anfrage zu groß / speicherintensiv;
+ * stattdessen Anthropic Files API (Upload → file_id), um Abbrüche („Failed to fetch“) zu reduzieren.
+ */
+const PDF_BYTES_USE_FILES_API = 1_400_000;
 
 export type ExtractVoParamsInput = {
   documentText: string;
@@ -51,6 +59,91 @@ Deckungskonzept, Marketing), dann **keine** typischen bAV-Standardwerte einsetze
 null lassen und in openQuestions den Dokumenttyp benennen. Jede Zahl nur mit Beleg im PDF.`;
 }
 
+type MessageLike = { content: Array<{ type: string; text?: string }> };
+
+function firstTextFromMessage(message: MessageLike): string {
+  const block = message.content.find((b) => b.type === "text");
+  if (!block || typeof block.text !== "string") {
+    throw new Error("Anthropic-Antwort enthielt keinen Textblock.");
+  }
+  return block.text;
+}
+
+async function runAnthropicExtraction(
+  client: Anthropic,
+  model: string,
+  input: ExtractVoParamsInput,
+  useNativePdf: boolean,
+): Promise<{ message: MessageLike; pdfTransport: "none" | "base64" | "files_api" }> {
+  if (!useNativePdf) {
+    const message = await client.messages.create({
+      model,
+      max_tokens: 16_384,
+      temperature: 0,
+      system: EXTRACTION_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: buildTextOnlyUserPrompt(input) }],
+    });
+    return { message, pdfTransport: "none" };
+  }
+
+  const pdf = input.pdfBytes!;
+
+  if (pdf.length >= PDF_BYTES_USE_FILES_API) {
+    const uploadable = await toFile(pdf, input.documentName, { type: "application/pdf" });
+    const uploaded = await client.beta.files.upload({
+      file: uploadable,
+      betas: [FILES_BETA],
+    });
+    try {
+      const message = await client.beta.messages.create({
+        model,
+        max_tokens: 16_384,
+        temperature: 0,
+        betas: [FILES_BETA],
+        system: EXTRACTION_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "document",
+                title: input.documentName,
+                source: { type: "file", file_id: uploaded.id },
+              },
+              { type: "text", text: buildPdfUserPrompt(input) },
+            ],
+          },
+        ],
+      });
+      return { message, pdfTransport: "files_api" };
+    } finally {
+      await client.beta.files.delete(uploaded.id, { betas: [FILES_BETA] }).catch(() => undefined);
+    }
+  }
+
+  const userContent: ContentBlockParam[] = [
+    {
+      type: "document",
+      title: input.documentName,
+      source: {
+        type: "base64",
+        media_type: "application/pdf",
+        data: pdf.toString("base64"),
+      },
+    },
+    { type: "text", text: buildPdfUserPrompt(input) },
+  ];
+
+  const message = await client.messages.create({
+    model,
+    max_tokens: 16_384,
+    temperature: 0,
+    system: EXTRACTION_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userContent }],
+  });
+  return { message, pdfTransport: "base64" };
+}
+
 export async function extractVoParams(
   input: ExtractVoParamsInput,
 ): Promise<VoBolzDirektzusageV1> {
@@ -66,33 +159,12 @@ export async function extractVoParams(
 
   const useNativePdf = Boolean(input.pdfBytes && input.pdfBytes.length > 0);
 
-  let userContent: string | ContentBlockParam[];
-  if (useNativePdf) {
-    userContent = [
-      {
-        type: "document",
-        title: input.documentName,
-        source: {
-          type: "base64",
-          media_type: "application/pdf",
-          data: input.pdfBytes!.toString("base64"),
-        },
-      },
-      { type: "text", text: buildPdfUserPrompt(input) },
-    ];
-  } else {
-    userContent = buildTextOnlyUserPrompt(input);
-  }
-
-  let message;
+  let message: MessageLike;
+  let pdfTransport: "none" | "base64" | "files_api" = "none";
   try {
-    message = await client.messages.create({
-      model,
-      max_tokens: 16_384,
-      temperature: 0,
-      system: EXTRACTION_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userContent }],
-    });
+    const out = await runAnthropicExtraction(client, model, input, useNativePdf);
+    message = out.message;
+    pdfTransport = out.pdfTransport;
   } catch (e) {
     if (e instanceof APIError && e.status === 404) {
       throw new Error(
@@ -102,16 +174,13 @@ export async function extractVoParams(
     throw e;
   }
 
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Anthropic-Antwort enthielt keinen Textblock.");
-  }
+  const textBlockText = firstTextFromMessage(message);
 
   let raw: unknown;
   try {
-    raw = parseJsonFromModelText(textBlock.text);
+    raw = parseJsonFromModelText(textBlockText);
   } catch (e) {
-    const snippet = textBlock.text.slice(0, 800);
+    const snippet = textBlockText.slice(0, 800);
     throw new Error(
       `JSON-Parsing fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}\n---\n${snippet}`,
     );
@@ -150,6 +219,7 @@ export async function extractVoParams(
       sourcePlainTextSha256,
       documentIngestMode: useNativePdf ? "anthropic_pdf" : "plain_text",
       quoteGrounding: grounding.level,
+      ...(useNativePdf ? { pdfTransport } : {}),
       ...(sourcePdfSha256 ? { sourcePdfSha256 } : {}),
     },
   };

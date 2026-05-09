@@ -47,6 +47,8 @@ export const metadataSchema = z.object({
   sourcePdfSha256: z.string().length(64).optional(),
   /** Vom Server: liegen Zitate im mitgelieferten Klartext (pdf-parse) wieder? */
   quoteGrounding: z.enum(["ok", "weak", "skipped"]).optional(),
+  /** Vom Server: PDF an Claude als Base64 im Request oder über Files-API (große PDFs). */
+  pdfTransport: z.enum(["none", "base64", "files_api"]).optional(),
 });
 
 export const schemeSchema = z.object({
