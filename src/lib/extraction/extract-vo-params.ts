@@ -7,8 +7,8 @@ import { normalizeAnthropicBolzJson } from "./normalize-extraction-json";
 import { parseJsonFromModelText } from "./parse-json-response";
 import { assessQuoteGroundingInPlainText } from "./quote-grounding";
 
-/** Aktuelles Standardmodell (siehe Anthropic-Modellliste); ältere IDs liefern oft 404. */
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+/** Standardmodell für den POC: Haiku ist deutlich günstiger als Sonnet; Qualität für komplexe VOs ggf. ANTHROPIC_MODEL=claude-sonnet-4-6 setzen. */
+const DEFAULT_MODEL = "claude-haiku-4-5";
 
 const FILES_BETA = "files-api-2025-04-14" as const;
 
@@ -137,7 +137,7 @@ export async function extractVoParams(
   } catch (e) {
     if (e instanceof APIError && e.status === 404) {
       throw new Error(
-        `Anthropic-Modell "${model}" wurde nicht gefunden (404). Lege in Vercel (oder .env) die Variable ANTHROPIC_MODEL auf ein aktuelles Modell, z. B. claude-sonnet-4-6 oder claude-haiku-4-5 — siehe https://docs.anthropic.com/en/docs/about-claude/models`,
+        `Anthropic-Modell "${model}" wurde nicht gefunden (404). Lege in Vercel (oder .env) die Variable ANTHROPIC_MODEL auf ein aktuelles Modell, z. B. claude-haiku-4-5 (günstig) oder claude-sonnet-4-6 (stärker) — siehe https://docs.anthropic.com/en/docs/about-claude/models`,
       );
     }
     throw e;
