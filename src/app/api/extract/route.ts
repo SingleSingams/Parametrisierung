@@ -9,6 +9,8 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MAX_PDF_BYTES = 32 * 1024 * 1024;
+/** Darüber kein pdf-parse: spart RAM/CPU auf Serverless bei mehreren MB PDF (z. B. ~3 MB). */
+const PDF_SKIP_TEXT_EXTRACT_BYTES = 900_000;
 
 export async function POST(req: Request) {
   try {
@@ -41,7 +43,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const text = (await extractPlainText(buffer, kind)).trim();
+    let text: string;
+    if (kind === "pdf" && buffer.length > PDF_SKIP_TEXT_EXTRACT_BYTES) {
+      text = "";
+    } else {
+      text = (await extractPlainText(buffer, kind)).trim();
+    }
 
     if (kind !== "pdf") {
       const tooShort = getVoPlainTextValidationMessage(text);

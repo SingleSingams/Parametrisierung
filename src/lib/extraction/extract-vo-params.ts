@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 
 import Anthropic, { APIError, toFile } from "@anthropic-ai/sdk";
-import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import { voBolzDirektzusageV1Schema, type VoBolzDirektzusageV1 } from "@/lib/schema";
 import { EXTRACTION_SYSTEM_PROMPT } from "./system-prompt";
 import { normalizeAnthropicBolzJson } from "./normalize-extraction-json";
@@ -12,12 +11,6 @@ import { assessQuoteGroundingInPlainText } from "./quote-grounding";
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 const FILES_BETA = "files-api-2025-04-14" as const;
-
-/**
- * Ab dieser Roh-PDF-Größe wird Base64 in einer Messages-JSON-Anfrage zu groß / speicherintensiv;
- * stattdessen Anthropic Files API (Upload → file_id), um Abbrüche („Failed to fetch“) zu reduzieren.
- */
-const PDF_BYTES_USE_FILES_API = 1_400_000;
 
 export type ExtractVoParamsInput = {
   documentText: string;
@@ -74,7 +67,7 @@ async function runAnthropicExtraction(
   model: string,
   input: ExtractVoParamsInput,
   useNativePdf: boolean,
-): Promise<{ message: MessageLike; pdfTransport: "none" | "base64" | "files_api" }> {
+): Promise<{ message: MessageLike; pdfTransport: "none" | "files_api" }> {
   if (!useNativePdf) {
     const message = await client.messages.create({
       model,
@@ -86,62 +79,38 @@ async function runAnthropicExtraction(
     return { message, pdfTransport: "none" };
   }
 
+  /** Immer Files-API: vermeidet riesiges Base64 im Messages-JSON (RAM + Payload-Limits bei mehreren MB PDF). */
   const pdf = input.pdfBytes!;
-
-  if (pdf.length >= PDF_BYTES_USE_FILES_API) {
-    const uploadable = await toFile(pdf, input.documentName, { type: "application/pdf" });
-    const uploaded = await client.beta.files.upload({
-      file: uploadable,
-      betas: [FILES_BETA],
-    });
-    try {
-      const message = await client.beta.messages.create({
-        model,
-        max_tokens: 16_384,
-        temperature: 0,
-        betas: [FILES_BETA],
-        system: EXTRACTION_SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "document",
-                title: input.documentName,
-                source: { type: "file", file_id: uploaded.id },
-              },
-              { type: "text", text: buildPdfUserPrompt(input) },
-            ],
-          },
-        ],
-      });
-      return { message, pdfTransport: "files_api" };
-    } finally {
-      await client.beta.files.delete(uploaded.id, { betas: [FILES_BETA] }).catch(() => undefined);
-    }
-  }
-
-  const userContent: ContentBlockParam[] = [
-    {
-      type: "document",
-      title: input.documentName,
-      source: {
-        type: "base64",
-        media_type: "application/pdf",
-        data: pdf.toString("base64"),
-      },
-    },
-    { type: "text", text: buildPdfUserPrompt(input) },
-  ];
-
-  const message = await client.messages.create({
-    model,
-    max_tokens: 16_384,
-    temperature: 0,
-    system: EXTRACTION_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userContent }],
+  const uploadable = await toFile(pdf, input.documentName, { type: "application/pdf" });
+  const uploaded = await client.beta.files.upload({
+    file: uploadable,
+    betas: [FILES_BETA],
   });
-  return { message, pdfTransport: "base64" };
+  try {
+    const message = await client.beta.messages.create({
+      model,
+      max_tokens: 16_384,
+      temperature: 0,
+      betas: [FILES_BETA],
+      system: EXTRACTION_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "document",
+              title: input.documentName,
+              source: { type: "file", file_id: uploaded.id },
+            },
+            { type: "text", text: buildPdfUserPrompt(input) },
+          ],
+        },
+      ],
+    });
+    return { message, pdfTransport: "files_api" };
+  } finally {
+    await client.beta.files.delete(uploaded.id, { betas: [FILES_BETA] }).catch(() => undefined);
+  }
 }
 
 export async function extractVoParams(
@@ -160,7 +129,7 @@ export async function extractVoParams(
   const useNativePdf = Boolean(input.pdfBytes && input.pdfBytes.length > 0);
 
   let message: MessageLike;
-  let pdfTransport: "none" | "base64" | "files_api" = "none";
+  let pdfTransport: "none" | "files_api" = "none";
   try {
     const out = await runAnthropicExtraction(client, model, input, useNativePdf);
     message = out.message;

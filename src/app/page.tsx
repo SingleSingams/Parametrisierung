@@ -80,14 +80,10 @@ function JsonDiagnostics({ jsonText }: { jsonText: string }) {
             PDF-Datei SHA-256: {pdfSha.slice(0, 18)}…
           </p>
         ) : null}
-        {typeof meta.pdfTransport === "string" && meta.pdfTransport !== "none" ? (
+        {typeof meta.pdfTransport === "string" && meta.pdfTransport === "files_api" ? (
           <p className="mt-1 text-[11px] text-sky-800/90 dark:text-sky-200/90">
-            Transport zum Modell:{" "}
-            <strong>
-              {meta.pdfTransport === "files_api"
-                ? "Files-API (für größere PDFs, weniger Abbruchrisiko)"
-                : "Base64 im Request"}
-            </strong>
+            Transport zum Modell: <strong>Anthropic Files-API</strong> (geeignet für größere
+            PDFs, kein Base64-Monster im Request)
           </p>
         ) : null}
         <p className="mt-2 font-mono text-[11px] text-sky-900/80 dark:text-sky-200/90">
@@ -156,7 +152,7 @@ function describeFetchFailure(err: unknown): string {
       "",
       "Mögliche Ursachen für **diese** App:",
       "• Die Serverless-Funktion /api/extract ist abgestürzt oder wurde vor Ende gekillt (Timeout, Speicher) — in Vercel → Projekt → Logs der Function prüfen.",
-      "• Sehr großes PDF + natives Claude-PDF: hoher Speicher- und Laufzeitbedarf.",
+      "• Sehr großes PDF: Speicher/Timeout auf der Function — PDF-Textextraktion wird ab ca. 0,9 MB Dateigröße übersprungen; Claude bekommt das PDF über die Files-API.",
       "• Sehr große Datei im Upload: manche Plattformen brechen multipart-Anfragen ab — Dateigröße prüfen (unter 4–5 MB ist oft sicherer).",
       "• Mobilfunk / Tab im Hintergrund: Verbindung weg — WLAN testen oder Seite neu laden.",
       "",
