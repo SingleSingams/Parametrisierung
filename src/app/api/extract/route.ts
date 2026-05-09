@@ -6,6 +6,8 @@ import { extractVoParams } from "@/lib/extraction/extract-vo-params";
 
 export const runtime = "nodejs";
 
+const MAX_PDF_BYTES = 32 * 1024 * 1024;
+
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
@@ -27,15 +29,29 @@ export async function POST(req: Request) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    if (kind === "pdf" && buffer.length > MAX_PDF_BYTES) {
+      return NextResponse.json(
+        {
+          error: `PDF zu groß (${buffer.length} Bytes, Maximum ${MAX_PDF_BYTES} Bytes laut Anthropic-Richtlinie).`,
+        },
+        { status: 413 },
+      );
+    }
+
     const text = (await extractPlainText(buffer, kind)).trim();
-    const tooShort = getVoPlainTextValidationMessage(text);
-    if (tooShort) {
-      return NextResponse.json({ error: tooShort }, { status: 422 });
+
+    if (kind !== "pdf") {
+      const tooShort = getVoPlainTextValidationMessage(text);
+      if (tooShort) {
+        return NextResponse.json({ error: tooShort }, { status: 422 });
+      }
     }
 
     const result = await extractVoParams({
       documentText: text,
       documentName: file.name,
+      ...(kind === "pdf" ? { pdfBytes: buffer } : {}),
     });
 
     return NextResponse.json(result);

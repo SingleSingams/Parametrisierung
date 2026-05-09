@@ -16,7 +16,33 @@ function JsonDiagnostics({ jsonText }: { jsonText: string }) {
   if (!meta) return null;
   const len = meta.sourcePlainTextLength;
   const sha = meta.sourcePlainTextSha256;
+  const mode = meta.documentIngestMode;
+  const pdfSha = meta.sourcePdfSha256;
   if (typeof len !== "number" || typeof sha !== "string") return null;
+
+  if (mode === "anthropic_pdf") {
+    return (
+      <div
+        className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
+        role="status"
+      >
+        <p className="font-medium">Dokument: natives PDF an Claude</p>
+        <p className="mt-1 text-xs leading-relaxed opacity-95">
+          Entspricht dem Vorgehen in Claude Code: das PDF wird direkt verarbeitet, nicht nur
+          eine oft unvollständige Textextraktion.
+        </p>
+        {typeof pdfSha === "string" ? (
+          <p className="mt-2 font-mono text-[11px]">
+            PDF-Datei SHA-256: {pdfSha.slice(0, 18)}…
+          </p>
+        ) : null}
+        <p className="mt-2 font-mono text-[11px] text-sky-900/80 dark:text-sky-200/90">
+          Zusatz: pdf-parse-Klartext {len} Zeichen · SHA {sha.slice(0, 12)}… (nur Diagnose)
+        </p>
+      </div>
+    );
+  }
+
   const ok = len >= MIN_VO_PLAIN_TEXT_CHARS;
   return (
     <div

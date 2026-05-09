@@ -13,6 +13,10 @@ export const metadataSchema = z.object({
   sourcePlainTextLength: z.number().int().nonnegative().optional(),
   /** SHA-256 (hex) des Klartexts — gleicher Hash bei verschiedenen Dateinamen = gleicher Textinhalt. */
   sourcePlainTextSha256: z.string().length(64).optional(),
+  /** Wie das Dokument an Claude übergeben wurde (vom Server gesetzt). */
+  documentIngestMode: z.enum(["plain_text", "anthropic_pdf"]).optional(),
+  /** SHA-256 (hex) der PDF-Rohdatei, nur bei `anthropic_pdf`. */
+  sourcePdfSha256: z.string().length(64).optional(),
 });
 
 export const schemeSchema = z.object({
